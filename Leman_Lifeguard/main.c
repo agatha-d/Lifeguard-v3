@@ -65,14 +65,14 @@ int main(void)
     usb_start();
     dcmi_start(); //starts the camera
     po8030_start();
-	//po8030_set_ae(1); //test disable auto exposure 0=disable, 1 = able
-	//po8030_set_awb(0); // test disable auto white balance0=disable, 1 = able
-	po8030_set_rgb_gain(0x20, 0x20, 0x20); // test same gain =1 for every color
+    po8030_set_ae(0); //test disable auto exposure 0=disable, 1 = able
+    po8030_set_awb(0); // test disable auto white balance0=disable, 1 = able
+    po8030_set_rgb_gain(0x20, 0x20, 0x20); // test same gain =1 for every color
     dac_start();
     playMelodyStart();
-	proximity_start(); //init the IR sensors
-	calibrate_ir();
-	motors_init();
+    proximity_start(); //init the IR sensors
+    calibrate_ir();
+    motors_init();
 
 	//Here : search for swimmers
 
