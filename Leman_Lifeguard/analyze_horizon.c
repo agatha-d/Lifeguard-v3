@@ -168,12 +168,12 @@ static THD_FUNCTION(ProcessImage, arg) {
 			//img[i/2] = (int)(img_buff_ptr[i]&0x07)<<5 | (img_buff_ptr[i+1]&0xE0)>>3;
 			//imb[i/2] = (int)(img_buff_ptr[i+1]&0x1F)<<3;
 
-			im_diff[i/2] = abs(2*imr[i/2] - imb[i/2] -img[i/2]); //- img[i/2]
+			//im_diff[i/2] = abs(2*imr[i/2] - imb[i/2] -img[i/2]); //- img[i/2]
 		}
 
 
 		//search for a swimmer in the image and gets its width in pixels
-		SwimmerWidth = extract_swimmer_width(im_diff);
+		SwimmerWidth = extract_swimmer_width(imr);
 
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
@@ -182,7 +182,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		if(send_to_computer){
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff, IMAGE_BUFFER_SIZE); // ausis flancs montants de vert et bleu quand voit du rouge :(
+			SendUint8ToComputer(imr, IMAGE_BUFFER_SIZE); // ausis flancs montants de vert et bleu quand voit du rouge :(
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;

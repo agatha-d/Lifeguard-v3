@@ -103,7 +103,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     systime_t time;
 
-    _Bool facing_left_shore = 0;
+    /*_Bool facing_left_shore = 0;
     _Bool facing_right_shore = 0;
     _Bool set_target = 0;
 
@@ -141,7 +141,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     // If no swimmer has been found, all the swimmers are safe
     else {
     	victory_start();
-    }
+    }*/
 
     //100Hz
     chThdSleepUntilWindowed(time, time + MS2ST(10));
