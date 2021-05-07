@@ -11,6 +11,7 @@
 
 static float distance_cm = 0;
 static uint16_t swimmer_position = IMAGE_BUFFER_SIZE/2;	//middle
+static uint16_t width = 0; //ajoutée pour pouvoir être retournée
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -21,7 +22,7 @@ static BSEMAPHORE_DECL(image_ready_sem, TRUE);
  */
 uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
 
-	uint16_t i = 0, begin = 0, end = 0, width = 0;
+	uint16_t i = 0, begin = 0, end = 0; //supprimé width =0 ici
 	uint8_t stop = 0, not_swimmer = 0, swimmer_not_found = 0;
 	uint32_t mean = 0;
 
@@ -138,7 +139,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
 	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0}; // red - blue - green
-	uint16_t SwimmerWidth = 7;
+	uint16_t SwimmerWidth = 0; // constante dépendant de la taille des balles ? Pourquoi était à 7 ????
 
 
 	bool send_to_computer = true;
@@ -195,6 +196,10 @@ float get_distance_cm(void){
 
 uint16_t get_swimmer_position(void){
 	return swimmer_position;
+}
+
+uint16_t get_swimmer_width(void){
+	return width;
 }
 
 void process_image_start(void){

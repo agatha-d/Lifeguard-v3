@@ -15,6 +15,8 @@ uint32_t average_buffer(uint8_t *buffer);
 
 uint16_t extract_swimmer_width(uint8_t *buffer);
 
+uint16_t get_swimmer_width(void);
+
 //int check_sea_or_beach(uint16_t position, uint16_t size, uint8_t *buffer_b, uint8_t *buffer_g);
 
 _Bool check_if_shore(uint8_t *buffer_blue, uint8_t *buffer_green);
