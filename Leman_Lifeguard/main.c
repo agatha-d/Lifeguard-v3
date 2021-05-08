@@ -78,7 +78,7 @@ int main(void)
 
 	//stars the threads for the pi regulator and the processing of the image
 	process_image_start();
-	search_swimmer_start();
+	//search_swimmer_start();
 	//go_to_swimmer_start();
 
 	//Here : bring swimmers back on beach

@@ -11,10 +11,14 @@
 
 static float distance_cm = 0;
 static uint16_t swimmer_position = IMAGE_BUFFER_SIZE/2;	//middle
+
+static int swimmer = 0;
+
 static uint16_t width = 0; //ajoutée pour pouvoir être retournée
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
+
 
 /*
  *  Returns the swimmer's width extracted from the image buffer given
@@ -23,85 +27,171 @@ static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
 
 	uint16_t i = 0, begin = 0, end = 0; //supprimé width =0 ici
-	uint8_t stop = 0, not_swimmer = 0, swimmer_not_found = 0;
+	uint8_t stop = 0; //swimmer_not_found = 0;
 	uint32_t mean = 0;
+	int out, noise, end_of_buffer = 0;
 
 	static uint16_t last_width = PXTOCM/GOAL_DISTANCE;
 
 	//performs an average
 
-	for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
+	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 		mean += buffer[i];
 	}
+
+	i=0;
 
 	mean /= IMAGE_BUFFER_SIZE;
 
 	do{
-		not_swimmer = 0;
+		noise = 0;
+		//swimmer = 1;?
+
+		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) // on parcourt l'image à la recherche d'une pente
+		{
+
+			 if ((buffer[i] - buffer[i-WIDTH_SLOPE]) > 20) //si flanc montant
+			 {
+				 // ancienne condition : && (buffer_blue[i] < mean_blue) && (buffer_blue[i-WIDTH_SLOPE] > mean_blue)){
+				 begin = i;
+				 stop = 1;
+
+			 }
+			 i++;
+		}
+		if(!begin)
+		{
+			//swimmer_not_found = 1;
+			swimmer = 0;
+			end_of_buffer = 1; //pour sortir de la boucle
+		}
 
 		//search for a begin: rise in color intensity
-		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)))
+		/*while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)))
 		{ 
 			//the slope must at least be WIDTH_SLOPE wide and is compared
 		    //to the mean of the image
 		    if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean) ){ // && (buffer_blue[i] < mean_blue) && (buffer_blue[i-WIDTH_SLOPE] > mean_blue)){
 		        begin = i;
 		        stop = 1;
+
 		    }
 		    i++;
 		}
+		*/
 
 		//if a begin was found, search for an end : fall of color intensity
 		//if begin = 0 : no begin
 
-		if (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE) && begin)
-		{
+		 //si l'on a detecté un pente montante
+
+		//if ((i <= (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)) && begin)
+		if (begin) {
 		    stop = 0;
 		    
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
-		        if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] < mean)){ //&& (buffer_blue[i] < mean_blue) && (buffer_blue[i+WIDTH_SLOPE] > mean_blue)){
-		            end = i;
+		      //  if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] < mean)){ //&& (buffer_blue[i] < mean_blue) && (buffer_blue[i+WIDTH_SLOPE] > mean_blue)){
+		        if((buffer[i-WIDTH_SLOPE] - buffer[i]) > 15) //si flanc descendant
+		        {
+		        	end = i;
 		            stop = 1;
 		        }
 		        i++;
 		    }
 		    //if an end was not found
-		    if (i > IMAGE_BUFFER_SIZE || !end)
+		    //if (i > IMAGE_BUFFER_SIZE || !end)
+		    if (end == 0)
 		    {
-		        swimmer_not_found = 1;
+		        //swimmer_not_found = 1;
+		        swimmer = 0;
 		    }
 		}
-		else {//if no begin was found
-		    swimmer_not_found = 1;
-		}
 
-		//if a swimmer too small has been detected, continues the search
-		if(!swimmer_not_found && (end-begin) < MIN_LINE_WIDTH){
+		if(end && (end-begin) < MIN_LINE_WIDTH){//if a swimmer too small has been detected, continues the search
+		//if(!swimmer_not_found && (end-begin) < MIN_LINE_WIDTH){
 			i = end;
 			begin = 0;
 			end = 0;
 			stop = 0;
-			not_swimmer = 1;
-		}
-	}while(not_swimmer);
+			swimmer = 0;
+			//swimmer_not_found = 1;
 
-	if(swimmer_not_found){
+		}
+
+		if(i>=IMAGE_BUFFER_SIZE)
+		{
+			end_of_buffer = 1;
+			swimmer = 0;
+		}
+
+		if(!swimmer)
+		{
+			if(end_of_buffer){
+				out = 1;
+			}
+			if(!end_of_buffer){
+				out = 0;
+			}
+		}
+
+		/*if(swimmer){
+
+			for(int j = begin ; j < end ; j++){
+
+					if(buffer[j] <10)//mettre un treshold
+					{
+						swimmer = 0;
+						noise++;
+					}
+				}
+
+			//if(buffer[(begin+end)/2] > 10) //threshold
+			f(noise <500) //mettre un treshold
+			{
+				last_width = width = (end - begin);
+				swimmer_position = (begin + end)/2; //gives the swimmer position.
+				out = 1;
+			}
+			else
+			{
+				swimmer = 0;
+				out = 0;
+			}
+		}*/
+
+
+	} while(!out);
+
+	//if(swimmer_not_found){
+	if(!swimmer){
+		set_body_led(0);
 		begin = 0;
 		end = 0;
-		width = last_width;
-	}else{
-		last_width = width = (end - begin);
-		swimmer_position = (begin + end)/2; //gives the swimmer position.
-		//chprintf((BaseSequentialStream *) &SDU1, "position : %d\n", swimmer_position);
+		//width = last_width;
+		width =0;
 	}
 
-	//sets a maximum width or returns the measured width
-	if((PXTOCM/width) > MAX_DISTANCE){
-		return PXTOCM/MAX_DISTANCE;
-	}else{
-		return width; // width = 0, not a swimmer
+	if(swimmer){
+		set_body_led(1);
+		//last_width = width = (end - begin);
+		width = (end - begin);
+		swimmer_position = (begin + end)/2; //gives the swimmer position.
 	}
+
+		//chprintf((BaseSequentialStream *) &SDU1, "position : %d\n", swimmer_position);
+
+
+	//sets a maximum width or returns the measured width
+	/*if(width){
+		if((PXTOCM/width) > MAX_DISTANCE){
+			return PXTOCM/MAX_DISTANCE;
+		}
+	}
+	else{*/
+
+		return width; // width = 0, not a swimmer
+	//}
 }
 
 
@@ -145,6 +235,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 	bool send_to_computer = true;
 
     while(1){
+
+    	//set_body_led(1);
     	//waits until an image has been captured
         chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565    
@@ -172,18 +264,20 @@ static THD_FUNCTION(ProcessImage, arg) {
 			//im_diff[i/2] = abs(2*imr[i/2] - imb[i/2] -img[i/2]); //- img[i/2]
 		}
 
+		//set_body_led(0);
+
 
 		//search for a swimmer in the image and gets its width in pixels
-		SwimmerWidth = extract_swimmer_width(imr);
+		SwimmerWidth = extract_swimmer_width(imr); //0 si pas de swimmer
 
 		//converts the width into a distance between the robot and the camera
-		if(SwimmerWidth){
-			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles
+		if(SwimmerWidth){ //si swimmer variable globale on peut mettre if(swimmer)
+			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles ===>VERIFIER LE PRODUIT EN CROIX
 		}
 
 		if(send_to_computer){
 			//sends to the computer the image
-			SendUint8ToComputer(imr, IMAGE_BUFFER_SIZE); // ausis flancs montants de vert et bleu quand voit du rouge :(
+			SendUint8ToComputer(imr, IMAGE_BUFFER_SIZE);
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;
