@@ -49,7 +49,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) //search for a begin: rise in color intensity
 		{
 
-			 if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean)) //si flanc montant
+			 if((buffer[i] > (mean+1)) && (buffer[i-WIDTH_SLOPE] <= mean)) //si flanc montant
 			 {
 				 begin = i;
 				 stop = 1;
@@ -64,12 +64,13 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		}
 
 		//slope at least be WIDTH_SLOPE wide and is compared to the mean of the image
-		if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean) ){
+
+		/*if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean) ){
 			begin = i;
 		    stop = 1;
 
 		}
-		i++;
+		i++;*/
 
 		//if ((i <= (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)) && begin)
 		if (begin) { //if a begin was found, search for an end : fall of color intensity
@@ -78,10 +79,11 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		    
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
-		    	if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] < mean)) //si flanc descendant
+		    	if((buffer[i] > (mean+1))  && (buffer[i+WIDTH_SLOPE] <= mean)) //si flanc descendant
 		        {
 		        	end = i;
 		            stop = 1;
+		            swimmer = 1;
 		        }
 		        i++;
 		    }
@@ -93,13 +95,17 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		    }
 		}
 
-		if(end && (end-begin) < MIN_LINE_WIDTH){//if a swimmer too small has been detected, continues the search
+		if(end && ((end-begin) < MIN_LINE_WIDTH)){//if a swimmer too small has been detected, continues the search
 		//if(!swimmer_not_found && (end-begin) < MIN_LINE_WIDTH){
 			i = end;
 			begin = 0;
 			end = 0;
 			stop = 0;
 			swimmer = 0;
+		}
+
+		if(end && ((end-begin) > MIN_LINE_WIDTH)){
+			out = 1;
 		}
 
 		if(i>=IMAGE_BUFFER_SIZE)
@@ -122,8 +128,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 
 	if(!swimmer){
-		clear_leds();
-		set_led(LED3, 10);;
+		set_front_led(0);
+		set_led(LED3, 10);
 		begin = 0;
 		end = 0;
 		//width = last_width;
