@@ -5,6 +5,7 @@
 
 #include <main.h>
 #include <camera/po8030.h>
+#include<leds.h>
 
 #include <analyze_horizon.h>
 
@@ -121,6 +122,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 
 	if(!swimmer){
+		clear_leds();
+		set_led(LED3, 10);;
 		begin = 0;
 		end = 0;
 		//width = last_width;
@@ -128,7 +131,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	}
 
 	if(swimmer){
-		set_body_led(1);
+		clear_leds();
+		set_front_led(1);
 		//last_width = width = (end - begin);
 		width = (end - begin);
 		swimmer_position = (begin + end)/2; //gives the swimmer position.
@@ -156,7 +160,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons), choix ligne ???? semple voir le sol 15 cm devant lui pour l'instant => prendre plus haut
-	po8030_advanced_config(FORMAT_RGB565, 0, 7, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1); // voir si 10 assez b
+	po8030_advanced_config(FORMAT_RGB565, 0, 170, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1); // voir si 10 assez b
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -216,14 +220,14 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//Smoothing the signal to reduce noise with moving average
-		int n = 30;
+		int n = 5;
 		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
 		{
 			im_diff_smooth[k] = (im_diff[k]+im_diff[k+1]+im_diff[k+2]
 									+ im_diff[k+3] + im_diff[k+4]
 									+ im_diff[k+5] + im_diff[k+6]
 									+ im_diff[k+7] + im_diff[k+8]
-									+ im_diff[k+9] + im_diff[k+10]
+									+ im_diff[k+9] /*+ im_diff[k+10]
 									+ im_diff[k+11]+ im_diff[k+12]
 									+ im_diff[k+13]+ im_diff[k+14]
 									+ im_diff[k+15]+ im_diff[k+16]
@@ -233,7 +237,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 									+ im_diff[k+23]+ im_diff[k+24]
 									+ im_diff[k+25]+ im_diff[k+26]
 									+ im_diff[k+27]+ im_diff[k+28]
-									+ im_diff[k+29])/30;//moving_average (im_diff, k, n);
+									+ im_diff[k+29])*//10);//moving_average (im_diff, k, n);
 		}
 
 		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
@@ -254,7 +258,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		if(send_to_computer){
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
+			SendUint8ToComputer(im_diff_smooth, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;
