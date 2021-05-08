@@ -63,15 +63,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 			end_of_buffer = 1;
 		}
 
-		//slope at least be WIDTH_SLOPE wide and is compared to the mean of the image
-
-		/*if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean) ){
-			begin = i;
-		    stop = 1;
-
-		}
-		i++;*/
-
 		//if ((i <= (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)) && begin)
 		if (begin) { //if a begin was found, search for an end : fall of color intensity
 
