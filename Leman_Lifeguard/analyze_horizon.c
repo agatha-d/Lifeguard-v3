@@ -175,67 +175,91 @@ static THD_FUNCTION(CaptureImage, arg) {
 static THD_WORKING_AREA(waProcessImage, 4096);
 static THD_FUNCTION(ProcessImage, arg) {
 
-    chRegSetThreadName(__FUNCTION__);
-    (void)arg;
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
 
 	uint8_t *img_buff_ptr;
 	uint8_t imr[IMAGE_BUFFER_SIZE] = {0}; // store red values
 	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
 	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0}; // red - blue - green
-	uint16_t SwimmerWidth = 0; // constante dépendant de la taille des balles ? Pourquoi était à 7 ????
+	uint8_t im_diff_smooth[IMAGE_BUFFER_SIZE] = {0};
+	int8_t tmp = 0;
+	uint16_t SwimmerWidth = 7;
 
 	bool send_to_computer = true;
 
-    while(1){
-
-    	//set_body_led(1);
-    	//waits until an image has been captured
-        chBSemWait(&image_ready_sem);
+	while(1){
+		//waits until an image has been captured
+		chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565    
 		img_buff_ptr = dcmi_get_last_image_ptr();
 
+		/* Separate RGB values for each pixel
+		 * The MSB for the three colors are aligned on the bit 6
+		 * Big endian format
+		 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
+		 * Next pixel = img_buff_pointer[i+2]
+		 */
 
-		// attention : 16 bits mais format big endian : adresse de poids fort donnée
-		 //img buffer pointer : cases de 8 bits, 1 pixel =  couleurs codées sur 16 bits
-		// donc pixel suivant = buffer [i+2]
-
-		// Attention décalage : début aligné entre les trois (MSB) => meme valeur max pour les trois couleurs
-
-		//Extracts RGB intensity values for each pixels
 		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
 
 			imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8) >> 2;
 			img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
 			imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
 
-			//Values main template : => plus grande intensité, peut être mieux ?
-			//imr[i/2] = (int)img_buff_ptr[i]&0xF8;
-			//img[i/2] = (int)(img_buff_ptr[i]&0x07)<<5 | (img_buff_ptr[i+1]&0xE0)>>3;
-			//imb[i/2] = (int)(img_buff_ptr[i+1]&0x1F)<<3;
-
-			//im_diff[i/2] = abs(2*imr[i/2] - imb[i/2] -img[i/2]); //- img[i/2]
+			tmp = 2*imr[i/2] - imb[i/2] -img[i/2];//abs(2*imr[i/2] - imb[i/2] -img[i/2]); // Substract blue and green values in order to cancel red in other areas than swimmer
+			if (tmp <4){ // error message says it's always false
+				tmp = 0;
+			}
+			im_diff[i/2] = tmp;
 		}
 
-		//set_body_led(0);
+		//Smoothing the signal to reduce noise with moving average
+		int n = 30;
+		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
+		{
+			im_diff_smooth[k] = (im_diff[k]+im_diff[k+1]+im_diff[k+2]
+									+ im_diff[k+3] + im_diff[k+4]
+									+ im_diff[k+5] + im_diff[k+6]
+									+ im_diff[k+7] + im_diff[k+8]
+									+ im_diff[k+9] + im_diff[k+10]
+									+ im_diff[k+11]+ im_diff[k+12]
+									+ im_diff[k+13]+ im_diff[k+14]
+									+ im_diff[k+15]+ im_diff[k+16]
+									+ im_diff[k+17]+ im_diff[k+18]
+									+ im_diff[k+19]+ im_diff[k+20]
+									+ im_diff[k+21]+ im_diff[k+22]
+									+ im_diff[k+23]+ im_diff[k+24]
+									+ im_diff[k+25]+ im_diff[k+26]
+									+ im_diff[k+27]+ im_diff[k+28]
+									+ im_diff[k+29])/30;//moving_average (im_diff, k, n);
+		}
+
+		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
+		{
+					im_diff_smooth[k] = im_diff[k];
+		}
 
 
 		//search for a swimmer in the image and gets its width in pixels
-		SwimmerWidth = extract_swimmer_width(imr); //0 si pas de swimmer
+		SwimmerWidth = extract_swimmer_width(im_diff);
 
 		//converts the width into a distance between the robot and the camera
-		if(SwimmerWidth){ //si swimmer variable globale on peut mettre if(swimmer)
-			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles ===>VERIFIER LE PRODUIT EN CROIX
+		if(SwimmerWidth){
+			//set_led(LED3, 1);
+			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles
+
 		}
 
 		if(send_to_computer){
 			//sends to the computer the image
-			SendUint8ToComputer(imr, IMAGE_BUFFER_SIZE);
+			SendUint8ToComputer(im_diff, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;
-    }
-}
+	    }
+	}
 
 float get_distance_cm(void){
 	return distance_cm;
