@@ -14,28 +14,26 @@ static uint16_t swimmer_position = IMAGE_BUFFER_SIZE/2;	//middle
 
 static int swimmer = 0;
 
-static uint16_t width = 0; //ajoutée pour pouvoir être retournée
+static uint16_t width = 0;
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 
 /*
- *  Returns the swimmer's width extracted from the image buffer given
- *  Returns 0 if Swimmer not found
+ *Returns the swimmer's width extracted from the image buffer given
+ *Returns 0 if Swimmer not found
  */
-uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
+uint16_t extract_swimmer_width(uint8_t *buffer){
 
-	uint16_t i = 0, begin = 0, end = 0; //supprimé width =0 ici
-	uint8_t stop = 0; //swimmer_not_found = 0;
+	uint16_t i = 0, begin = 0, end = 0;
+	uint8_t stop = 0;
 	uint32_t mean = 0;
-	int out, noise, end_of_buffer = 0;
+	int out = 0, end_of_buffer = 0;
+	static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //utile?
 
-	static uint16_t last_width = PXTOCM/GOAL_DISTANCE;
 
-	//performs an average
-
-	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
+	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){//average
 		mean += buffer[i];
 	}
 
@@ -44,64 +42,50 @@ uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
 	mean /= IMAGE_BUFFER_SIZE;
 
 	do{
-		noise = 0;
-		//swimmer = 1;?
 
-		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) // on parcourt l'image à la recherche d'une pente
+		//swimmer = 1; ???
+
+		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) //search for a begin: rise in color intensity
 		{
 
-			 if ((buffer[i] - buffer[i-WIDTH_SLOPE]) > 20) //si flanc montant
+			 if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean)) //si flanc montant
 			 {
-				 // ancienne condition : && (buffer_blue[i] < mean_blue) && (buffer_blue[i-WIDTH_SLOPE] > mean_blue)){
 				 begin = i;
 				 stop = 1;
 
 			 }
 			 i++;
 		}
-		if(!begin)
+		if(!begin)//abscence flanc montant ->sortie de do...while
 		{
-			//swimmer_not_found = 1;
 			swimmer = 0;
-			end_of_buffer = 1; //pour sortir de la boucle
+			end_of_buffer = 1;
 		}
 
-		//search for a begin: rise in color intensity
-		/*while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)))
-		{ 
-			//the slope must at least be WIDTH_SLOPE wide and is compared
-		    //to the mean of the image
-		    if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean) ){ // && (buffer_blue[i] < mean_blue) && (buffer_blue[i-WIDTH_SLOPE] > mean_blue)){
-		        begin = i;
-		        stop = 1;
+		//slope at least be WIDTH_SLOPE wide and is compared to the mean of the image
+		if((buffer[i] > mean) && (buffer[i-WIDTH_SLOPE] < mean) ){
+			begin = i;
+		    stop = 1;
 
-		    }
-		    i++;
 		}
-		*/
-
-		//if a begin was found, search for an end : fall of color intensity
-		//if begin = 0 : no begin
-
-		 //si l'on a detecté un pente montante
+		i++;
 
 		//if ((i <= (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)) && begin)
-		if (begin) {
+		if (begin) { //if a begin was found, search for an end : fall of color intensity
+
 		    stop = 0;
 		    
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
-		      //  if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] < mean)){ //&& (buffer_blue[i] < mean_blue) && (buffer_blue[i+WIDTH_SLOPE] > mean_blue)){
-		        if((buffer[i-WIDTH_SLOPE] - buffer[i]) > 15) //si flanc descendant
+		    	if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] < mean)) //si flanc descendant
 		        {
 		        	end = i;
 		            stop = 1;
 		        }
 		        i++;
 		    }
-		    //if an end was not found
-		    //if (i > IMAGE_BUFFER_SIZE || !end)
-		    if (end == 0)
+		    //if (i > IMAGE_BUFFER_SIZE || !end) ->a quoi sert de mettre ces 2 conditions?
+		    if (!end) //if an end was not found ->sortie de la boucle
 		    {
 		        //swimmer_not_found = 1;
 		        swimmer = 0;
@@ -115,8 +99,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
 			end = 0;
 			stop = 0;
 			swimmer = 0;
-			//swimmer_not_found = 1;
-
 		}
 
 		if(i>=IMAGE_BUFFER_SIZE)
@@ -135,37 +117,10 @@ uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
 			}
 		}
 
-		/*if(swimmer){
-
-			for(int j = begin ; j < end ; j++){
-
-					if(buffer[j] <10)//mettre un treshold
-					{
-						swimmer = 0;
-						noise++;
-					}
-				}
-
-			//if(buffer[(begin+end)/2] > 10) //threshold
-			f(noise <500) //mettre un treshold
-			{
-				last_width = width = (end - begin);
-				swimmer_position = (begin + end)/2; //gives the swimmer position.
-				out = 1;
-			}
-			else
-			{
-				swimmer = 0;
-				out = 0;
-			}
-		}*/
-
-
 	} while(!out);
 
-	//if(swimmer_not_found){
+
 	if(!swimmer){
-		set_body_led(0);
 		begin = 0;
 		end = 0;
 		//width = last_width;
@@ -179,19 +134,18 @@ uint16_t extract_swimmer_width(uint8_t *buffer){ //ajout buffer blue ?
 		swimmer_position = (begin + end)/2; //gives the swimmer position.
 	}
 
-		//chprintf((BaseSequentialStream *) &SDU1, "position : %d\n", swimmer_position);
+	//chprintf((BaseSequentialStream *) &SDU1, "position : %d\n", swimmer_position);
 
 
-	//sets a maximum width or returns the measured width
-	/*if(width){
+	//sets a maximum width or returns the measured width ->à verifier
+	if(width){
 		if((PXTOCM/width) > MAX_DISTANCE){
 			return PXTOCM/MAX_DISTANCE;
 		}
 	}
-	else{*/
-
+	else{
 		return width; // width = 0, not a swimmer
-	//}
+	}
 }
 
 
@@ -230,7 +184,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0}; // red - blue - green
 	uint16_t SwimmerWidth = 0; // constante dépendant de la taille des balles ? Pourquoi était à 7 ????
-
 
 	bool send_to_computer = true;
 

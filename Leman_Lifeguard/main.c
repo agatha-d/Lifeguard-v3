@@ -14,6 +14,7 @@
 #include <chprintf.h>
 #include <msgbus/messagebus.h>
 
+
 #include <navigation.h>
 #include <analyze_horizon.h>
 #include <navigation.h>
@@ -52,7 +53,7 @@ static void serial_start(void)
 
 int main(void)
 {
-
+	set_body_led(1);
     halInit();
     chSysInit();
     mpu_init();
