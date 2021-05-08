@@ -139,14 +139,14 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 
 	//sets a maximum width or returns the measured width ->à verifier
-	if(width){
+	/*if(width){
 		if((PXTOCM/width) > MAX_DISTANCE){
 			return PXTOCM/MAX_DISTANCE;
 		}
 	}
 	else{
-		return width; // width = 0, not a swimmer
-	}
+		*/
+	return width; // width = 0, not a swimmer
 }
 
 
@@ -413,5 +413,4 @@ uint32_t average_buffer(uint8_t *buffer){
 	mean /= IMAGE_BUFFER_SIZE;
 
 	return mean;
-
 }

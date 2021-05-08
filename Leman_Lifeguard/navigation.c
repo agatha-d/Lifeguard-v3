@@ -104,32 +104,39 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     systime_t time;
 
-    clear_leds();
+   // clear_leds();
     int turn_count = 0;
     int swimmer_found = 0;
     int initial_count = left_motor_get_pos();
 
-    while((!swimmer_found) && (turn_count<2*HALF_TURN_COUNT)){
-    	set_led(LED5, 10);
-		right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-		left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
-		turn_count += right_motor_get_pos() - initial_count;
-    	swimmer_found = get_swimmer_width();
-    }
-    if (turn_count > (2*HALF_TURN_COUNT)){
+
+    while(1){
+    time = chVTGetSystemTime();
+
+		while((!swimmer_found) && (turn_count<2*HALF_TURN_COUNT)){
+
+			//set_led(LED5, 10);
+			right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+			left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+			turn_count = (left_motor_get_pos() - initial_count);
+			swimmer_found = get_swimmer_width();
+		}
+
+   /* if (turn_count > (2*HALF_TURN_COUNT)){
     	set_front_led(1);
     }
+*/
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 
-    if (swimmer_found){
+   /* if (swimmer_found){
     	clear_leds();
     	set_led(LED3, 10);
     }
     else {
     	clear_leds();
     	set_body_led(1);
-    }
+    }*/
 
     //return swimmer_found; // ou alors ne retourne rien et play victory ici
 
@@ -175,6 +182,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     //100Hz
     chThdSleepUntilWindowed(time, time + MS2ST(10));
+    }
 
 }
 
