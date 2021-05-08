@@ -53,7 +53,6 @@ static void serial_start(void)
 
 int main(void)
 {
-	set_body_led(1);
     halInit();
     chSysInit();
     mpu_init();
