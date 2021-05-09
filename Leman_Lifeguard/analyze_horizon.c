@@ -44,8 +44,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	do{
 
-		//swimmer = 1; ???
-
 		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) //search for a begin: rise in color intensity
 		{
 
@@ -63,7 +61,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 			end_of_buffer = 1;
 		}
 
-		//if ((i <= (IMAGE_BUFFER_SIZE - WIDTH_SLOPE)) && begin)
 		if (begin) { //if a begin was found, search for an end : fall of color intensity
 
 		    stop = 0;
@@ -78,7 +75,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		        }
 		        i++;
 		    }
-		    //if (i > IMAGE_BUFFER_SIZE || !end) ->a quoi sert de mettre ces 2 conditions?
+
 		    if (!end) //if an end was not found ->sortie de la boucle
 		    {
 		        //swimmer_not_found = 1;
@@ -87,7 +84,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		}
 
 		if(end && ((end-begin) < MIN_LINE_WIDTH)){//if a swimmer too small has been detected, continues the search
-		//if(!swimmer_not_found && (end-begin) < MIN_LINE_WIDTH){
+
 			i = end;
 			begin = 0;
 			end = 0;
