@@ -21,6 +21,8 @@
 // Searches for a swimmer to save
 void search_swimmer_start(void);
 
+_Bool get_empty_lake(void);
+
 // Start the PI regulator thread to go to swimmer
 void go_to_swimmer_start(void);
 

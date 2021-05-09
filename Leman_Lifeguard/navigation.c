@@ -3,6 +3,7 @@
 #include <math.h>
 #include <usbcfg.h>
 #include <chprintf.h>
+#include <chthreads.h>
 
 #include <main.h>
 #include <motors.h>
@@ -10,6 +11,8 @@
 #include <navigation.h>
 #include <analyze_horizon.h>
 #include <victory.h>
+
+static _Bool empty_lake = 0;
 
 //simple PI regulator implementation
 int16_t crawl_to_swimmer(float distance, float goal){
@@ -122,21 +125,21 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			swimmer_found = get_swimmer_width();
 		}
 
-   /* if (turn_count > (2*HALF_TURN_COUNT)){
-    	set_front_led(1);
+    if (turn_count > (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
+    	empty_lake = 1;
     }
-*/
+
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 
-   /* if (swimmer_found){
-    	clear_leds();
-    	set_led(LED3, 10);
+   if (swimmer_found){
+    	empty_lake = 0;
     }
     else {
-    	clear_leds();
-    	set_body_led(1);
-    }*/
+    	empty_lake = 1;
+    }
+
+   chThdExit(0);
 
     //return swimmer_found; // ou alors ne retourne rien et play victory ici
 
@@ -184,6 +187,10 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     chThdSleepUntilWindowed(time, time + MS2ST(10));
     }
 
+}
+
+_Bool get_empty_lake(void){
+	return empty_lake;
 }
 
 
