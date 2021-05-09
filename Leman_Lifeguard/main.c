@@ -54,6 +54,7 @@ static void serial_start(void)
 
 int main(void)
 {
+
     halInit();
     chSysInit();
     mpu_init();
@@ -80,40 +81,46 @@ int main(void)
 	//stars the threads for the pi regulator and the processing of the image
 
     uint8_t state = 0;
+    _Bool all_swimmers_saved = 0;
 
     clear_leds();
     process_image_start();
 
-    switch(state) {
-		case 0: // Search for swimmer to save
-			set_led(LED2, 10);
-			set_led(LED6, 10);
-			search_swimmer_start();
-			if(get_empty_lake()){
-				set_led(LED6, 10);
-				state = 3;
-			}
-			// if not swimmer found go to victory
-			state = 1;
-			break;
-		case 1:
-			set_led(LED3, 10);
-			go_to_swimmer_start();
-			//ajouter IR ici ou dans la thread ????
-			break;
-		case 2:
-			set_led(LED4, 10);
-			//go_back_to_beach ou save_swimmer
-			// retour case 0
-			state = 0;
-			break;
-		case 3: //victory
-			set_led(LED5, 10);
-			//start la bonne thread
-			//play victory music
-			break;
+    while(!all_swimmers_saved)
+    {
+		switch(state) {
+			case 0: // Search for swimmer to save
+				set_led(LED2, 10);
+				//set_led(LED6, 10);
+				search_swimmer_start();
+				if(get_empty_lake()){//if not swimmer found go to victory
+					set_led(LED6, 10);
+					state = 3;
+				}
+				state = 1;
+				break;
+			case 1://go to swimmers
+				clear_leds();
+				set_led(LED3, 10);
+				go_to_swimmer_start();
+				//ajouter IR ici ou dans la thread ????
+				break;
+			case 2:
+				clear_leds();
+				set_led(LED4, 10);
+				//go_back_to_beach ou save_swimmer
+				// retour case 0
+				state = 0;
+				break;
+			case 3: //victory
+				clear_leds();
+				set_led(LED5, 10);
+				//start la bonne thread
+				//play victory music
+				all_swimmers_saved = 1;
+				break;
+		}
     }
-
 	//Here : bring swimmers back on beach
 
 
