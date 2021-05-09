@@ -125,7 +125,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     while(1){
 		time = chVTGetSystemTime();
 
-			while((!swimmer_found) && (turn_count<2*HALF_TURN_COUNT)){
+			while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT)){
 
 				//set_led(LED5, 10);
 				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
