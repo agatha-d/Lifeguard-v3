@@ -134,7 +134,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				swimmer_found = get_swimmer_width();
 			}
 
-		if (turn_count > (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
+		if (turn_count >= (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
 			empty_lake = 1;
 		}
 

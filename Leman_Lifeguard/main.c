@@ -90,37 +90,40 @@ int main(void)
     {
 		switch(state) {
 			case 0: // Search for swimmer to save
-				set_led(LED2, 10);
+				clear_leds();
+				set_body_led(1);
 				//set_led(LED6, 10);
 				search_swimmer_start();
 				if(get_empty_lake()){//if not swimmer found go to victory
-					set_led(LED6, 10);
+					set_body_led(0);
+					set_led(LED6, 1);
 					state = 3;
 				}
 				state = 1;
 				break;
 			case 1://go to swimmers
 				clear_leds();
-				set_led(LED3, 10);
+				set_led(LED3, 1);
 				//go_to_swimmer_start();
 				//ajouter IR ici ou dans la thread ????
 				break;
 			case 2:
 				clear_leds();
-				set_led(LED4, 10);
+				set_rgb_led(LED4, 1, 0, 0);
 				//go_back_to_beach ou save_swimmer
 				// retour case 0
 				state = 0;
 				break;
 			case 3: //victory
 				clear_leds();
-				set_led(LED5, 10);
+				set_led(LED5, 1);
 				//start la bonne thread
 				//play victory music
 				all_swimmers_saved = 1;
 				break;
 		}
     }
+    clear_leds();
 	//Here : bring swimmers back on beach
 
 
