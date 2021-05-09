@@ -102,7 +102,7 @@ int main(void)
 			case 1://go to swimmers
 				clear_leds();
 				set_led(LED3, 10);
-				go_to_swimmer_start();
+				//go_to_swimmer_start();
 				//ajouter IR ici ou dans la thread ????
 				break;
 			case 2:

@@ -14,6 +14,8 @@
 
 static _Bool empty_lake = 0;
 
+static BSEMAPHORE_DECL(lake_analyzed_sem, TRUE);
+
 //simple PI regulator implementation
 int16_t crawl_to_swimmer(float distance, float goal){
 
@@ -59,7 +61,12 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 
     static float sum_rot_error = 0;
 
+
+
     while(1){
+
+    	chBSemWait(&lake_analyzed_sem);
+
         time = chVTGetSystemTime();
         
         //computes the speed to give to the motors
@@ -113,78 +120,84 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     int initial_count = left_motor_get_pos();
 
 
+
+
     while(1){
-    time = chVTGetSystemTime();
+		time = chVTGetSystemTime();
 
-		while((!swimmer_found) && (turn_count<2*HALF_TURN_COUNT)){
+			while((!swimmer_found) && (turn_count<2*HALF_TURN_COUNT)){
 
-			//set_led(LED5, 10);
-			right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-			left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
-			turn_count = (left_motor_get_pos() - initial_count);
-			swimmer_found = get_swimmer_width();
+				//set_led(LED5, 10);
+				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+				left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+				turn_count = (left_motor_get_pos() - initial_count);
+				swimmer_found = get_swimmer_width();
+			}
+
+		if (turn_count > (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
+			empty_lake = 1;
 		}
 
-    if (turn_count > (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
-    	empty_lake = 1;
-    }
+		right_motor_set_speed(0);
+		left_motor_set_speed(0);
 
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
+	   if (swimmer_found){
+			empty_lake = 0;
+		}
+	   if (!swimmer_found){
+			empty_lake = 1;
+		}
 
-   if (swimmer_found){
-    	empty_lake = 0;
-    }
-    else {
-    	empty_lake = 1;
-    }
+	   //chThdYield();
+	   //chThdExit(0);
 
-   chThdExit(0);
+		//return swimmer_found; // ou alors ne retourne rien et play victory ici
 
-    //return swimmer_found; // ou alors ne retourne rien et play victory ici
+		/*_Bool facing_left_shore = 0;
+		_Bool facing_right_shore = 0;
+		_Bool set_target = 0;
 
-    /*_Bool facing_left_shore = 0;
-    _Bool facing_right_shore = 0;
-    _Bool set_target = 0;
+		right_motor_set_speed(0);
+		left_motor_set_speed(0);
 
-    right_motor_set_speed(0);
-    left_motor_set_speed(0);
+		while(!facing_left_shore){//facing the lake = flanc montant vert/bleu
 
-    while(!facing_left_shore){//facing the lake = flanc montant vert/bleu
+			right_motor_set_speed(MOTOR_SPEED_LIMIT/6);
+			left_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
 
-    	right_motor_set_speed(MOTOR_SPEED_LIMIT/6);
-    	left_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+			facing_left_shore = check_left_shore(); // = flanc bleu/vert, fonction dans analyze_horizon, pas encore codée
+		}
 
-    	facing_left_shore = check_left_shore(); // = flanc bleu/vert, fonction dans analyze_horizon, pas encore codée
-    }
+		right_motor_set_speed(0);
+		left_motor_set_speed(0);
 
-    right_motor_set_speed(0);
-    left_motor_set_speed(0);
+		//Now the robot is facing the left side of the shore
+		//It starts scanning for swimmers by turning slowly to the right
 
-    //Now the robot is facing the left side of the shore
-    //It starts scanning for swimmers by turning slowly to the right
+		while(!get_swimmer_position()){
+			right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+			left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+			if(check_right_shore()){
+				break;
+			}
+		}
 
-    while(!get_swimmer_position()){
-    	right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-    	left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
-    	if(check_right_shore()){
-    		break;
-    	}
-    }
+		right_motor_set_speed(0);
+		left_motor_set_speed(0);
 
-    right_motor_set_speed(0);
-    left_motor_set_speed(0);
+		if(get_swimmer_position || check_right_shore()){ // nécessaire d'avoir les deux ?
+			set_target = 1; // is it possible for a thread to return a value ?
+		}
+		// If no swimmer has been found, all the swimmers are safe
+		else {
+			victory_start();
+		}*/
 
-    if(get_swimmer_position || check_right_shore()){ // nécessaire d'avoir les deux ?
-    	set_target = 1; // is it possible for a thread to return a value ?
-    }
-    // If no swimmer has been found, all the swimmers are safe
-    else {
-    	victory_start();
-    }*/
 
-    //100Hz
-    chThdSleepUntilWindowed(time, time + MS2ST(10));
+	   chBSemSignal(&lake_analyzed_sem);
+
+		//100Hz
+		//chThdSleepUntilWindowed(time, time + MS2ST(10));
     }
 
 }
