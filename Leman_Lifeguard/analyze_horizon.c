@@ -116,7 +116,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 
 	if(!swimmer){
-		set_front_led(0);
+		//set_front_led(0);
 		set_led(LED3, 10);
 		begin = 0;
 		end = 0;
@@ -126,7 +126,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	if(swimmer){
 		clear_leds();
-		set_front_led(1);
+		//set_front_led(1);
 		//last_width = width = (end - begin);
 		width = (end - begin);
 		swimmer_position = (begin + end)/2; //gives the swimmer position.

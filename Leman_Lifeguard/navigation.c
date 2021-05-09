@@ -120,12 +120,12 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     int initial_count = left_motor_get_pos();
 
 
-
+set_front_led(0);
 
     while(1){
 		time = chVTGetSystemTime();
 
-			while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT)){
+			while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT) && (!empty_lake)){
 
 				//set_led(LED5, 10);
 				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
@@ -134,18 +134,21 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				swimmer_found = get_swimmer_width();
 			}
 
-		if (turn_count >= (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
-			empty_lake = 1;
-		}
+		//if (turn_count >= (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
+			//empty_lake = 1;
+		//}
 
 		right_motor_set_speed(0);
 		left_motor_set_speed(0);
 
 	   if (swimmer_found){
 			empty_lake = 0;
-		}
+			set_front_led(1);
+	   }
+
 	   if (!swimmer_found){
 			empty_lake = 1;
+			set_front_led(0);
 		}
 
 	   //chThdYield();
