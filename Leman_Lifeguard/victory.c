@@ -73,8 +73,8 @@ static THD_FUNCTION(VictoryMusic, arg) {
     	 if(rgb_counter == 30) {
     		 rgb_counter = 0;
     		 rgb_state = (rgb_state+1)%3;
-    		 set_body_led(2);
-    		 set_front_led(2);
+    		 //set_body_led(2);
+    		 //set_front_led(2);
     	 }
     	 melody_counter++;
     	 if(melody_counter == 20) {

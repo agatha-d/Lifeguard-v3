@@ -6,5 +6,4 @@
 
 void victory_start(void);
 
-
 #endif /* VICTORY_H */

@@ -7,6 +7,12 @@ uint16_t get_swimmer_position(void);
 
 void process_image_start(void);
 
+uint16_t swimmer_in_danger(uint8_t *buffer);
+
+uint32_t smoothing(uint8_t *buffer, int k, int n);
+
+int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int i);
+
 uint16_t rising_slope(uint8_t *buffer);
 
 uint16_t falling_slope(uint8_t *buffer);

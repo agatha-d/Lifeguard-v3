@@ -14,9 +14,11 @@
 
 static _Bool empty_lake = 0;
 
-//static _Bool analyse_done = 0;
+static _Bool analyse_done = 0;
 
-static BSEMAPHORE_DECL(lake_analyzed_sem, TRUE);
+//static _Bool analyse_to_be_made = 1;
+
+//static BSEMAPHORE_DECL(lake_analyzed_sem, TRUE);
 
 //simple PI regulator implementation
 int16_t crawl_to_swimmer(float distance, float goal){
@@ -50,10 +52,10 @@ int16_t crawl_to_swimmer(float distance, float goal){
 }
 
 // Must still add IR
-static THD_WORKING_AREA(waGoToSwimmer, 256);
-static THD_FUNCTION(GoToSwimmer, arg) {
+static THD_WORKING_AREA(waGoToSwimmer, 2048);
+static THD_FUNCTION(GoToSwimmer, arg) {//ATTENTION A LA SEMAPHORE ICI
 
-    chRegSetThreadName(__FUNCTION__);
+	chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
     systime_t time;
@@ -63,50 +65,54 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 
     static float sum_rot_error = 0;
 
-    while(1){
+    if(analyse_done)
+    {
+		while(1){
 
-    	chBSemWait(&lake_analyzed_sem);
+			//chBSemWait(&lake_analyzed_sem); ->A REMPLACER
 
-        time = chVTGetSystemTime();
-        
-        //computes the speed to give to the motors
-        //distance_cm is modified by the image processing thread
-        //speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE); // pour test rot seulement speed = 0
-        speed = 0;
-        //computes a correction factor to let the robot rotate to be in front of the line
-        volatile int16_t tmp = get_swimmer_position();
-        speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
+			time = chVTGetSystemTime();
+
+			//computes the speed to give to the motors
+			//distance_cm is modified by the image processing thread
+			//speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE); // pour test rot seulement speed = 0
+			speed = 0;
+			//computes a correction factor to let the robot rotate to be in front of the line
+			volatile int16_t tmp = get_swimmer_position();
+			speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
 
 
-        if(sum_rot_error > MAX_ROT_ERROR){
-        	sum_rot_error = MAX_ROT_ERROR;
-        	}else if(sum_rot_error < -MAX_ROT_ERROR){
-        		sum_rot_error = -MAX_ROT_ERROR;
-        	}
+			if(sum_rot_error > MAX_ROT_ERROR){
+				sum_rot_error = MAX_ROT_ERROR;
+				}else if(sum_rot_error < -MAX_ROT_ERROR){
+					sum_rot_error = -MAX_ROT_ERROR;
+				}
 
-        //chprintf((BaseSequentialStream *)&SD3, "sum error : %f, speed correction : %d \n,", sum_rot_error, speed_correction);
+			//chprintf((BaseSequentialStream *)&SD3, "sum error : %f, speed correction : %d \n,", sum_rot_error, speed_correction);
 
-        //if the line is nearly in front of the camera, don't rotate
-        if(abs(speed_correction) < ROTATION_THRESHOLD){
-        	speed_correction = 0;
-        }
-        sum_rot_error += speed_correction;
+			//if the line is nearly in front of the camera, don't rotate
+			if(abs(speed_correction) < ROTATION_THRESHOLD){
+				speed_correction = 0;
+			}
+			sum_rot_error += speed_correction;
 
-        //applies the speed from the PI regulator and the correction for the rotation
+			//applies the speed from the PI regulator and the correction for the rotation
 
-		right_motor_set_speed(speed - ROT_KP * speed_correction - ROT_KI*sum_rot_error);
-		left_motor_set_speed(speed + ROT_KP * speed_correction + ROT_KI*sum_rot_error);
+			right_motor_set_speed(speed - ROT_KP * speed_correction - ROT_KI*sum_rot_error);
+			left_motor_set_speed(speed + ROT_KP * speed_correction + ROT_KI*sum_rot_error);
 
-        //100Hz
-        chThdSleepUntilWindowed(time, time + MS2ST(10));
+			//100Hz
+			chThdSleepUntilWindowed(time, time + MS2ST(10));
+		}
     }
+
 }
 
 void go_to_swimmer_start(void){
-	chThdCreateStatic(waGoToSwimmer, sizeof(waGoToSwimmer), NORMALPRIO, GoToSwimmer, NULL);
+	chThdCreateStatic(waGoToSwimmer, sizeof(waGoToSwimmer), NORMALPRIO, GoToSwimmer, NULL);//remplacer NORMALPRIO PAR HIGHPRIO OU LOWPRIO??
 }
 
-static THD_WORKING_AREA(waSearchSwimmer, 256); // Not tested yet
+static THD_WORKING_AREA(waSearchSwimmer, 512); // Not tested yet
 static THD_FUNCTION(SearchSwimmer, arg) {
 
     chRegSetThreadName(__FUNCTION__);
@@ -114,40 +120,54 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     systime_t time;
 
-   // clear_leds();
+    clear_leds();
+
     int turn_count = 0;
     int swimmer_found = 0;
     int initial_count = left_motor_get_pos();
 
+    analyse_done = 0;
+   // analyse_to_be_made = 1;
+    /*ces 2 bool sont à vérifier - pour quand on rerentre dans la thread
+    ->peut être mieux de le mettre dans la fonction qui aura lieu quand
+    le robot sera retournée à la plage avec un swimmeur*/
+
+
+    //faire peut être une variable : analyse to be made??
 
     while(1){
-		time = chVTGetSystemTime();
 
-		while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT)){// && (!empty_lake)){
+    	/*if(!analyse_done)
+		{*/
 
-			//set_led(LED5, 10);
-			right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-			left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
-			turn_count = (left_motor_get_pos() - initial_count);
-			swimmer_found = get_swimmer_width();
-		}
 
-		//if (turn_count >= (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
-			//empty_lake = 1;
-		//}
+			time = chVTGetSystemTime();
 
-		right_motor_set_speed(0);
-		left_motor_set_speed(0);
+			while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT)){// && (!empty_lake)){
 
-	   if (swimmer_found){
-			empty_lake = 0;
-			set_front_led(1);
-	   }
+				//set_led(LED5, 10);
+				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+				left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+				turn_count = (left_motor_get_pos() - initial_count);
+				swimmer_found = get_swimmer_width();
+			}
 
-	   if (!swimmer_found){
-			empty_lake = 1;
-			set_front_led(0);
-		}
+			right_motor_set_speed(0);
+			left_motor_set_speed(0);
+
+			analyse_done = 1; //il faut la remettre à 0 quand on rerentre dans la thread
+
+			//A VOIRE SI C4EST UTILE
+		   if (swimmer_found){
+				empty_lake = 0;
+				//set_front_led(1);
+		   }
+
+		   if (!swimmer_found){
+				empty_lake = 1;
+				//set_front_led(0);
+			}
+
 
 	   //chThdYield();
 	   //chThdExit(0);
@@ -195,17 +215,29 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 		}*/
 
 
-	   chBSemSignal(&lake_analyzed_sem);
+
+
+
+
+
+	  // chBSemSignal(&lake_analyzed_sem); 	A REMPLACER
 
 		//100Hz
 		//chThdSleepUntilWindowed(time, time + MS2ST(10));
+		//}
     }
+
 
 }
 
 _Bool get_empty_lake(void){
 	return empty_lake;
 }
+
+_Bool get_analyse(void){
+	return analyse_done;
+}
+
 
 
 void search_swimmer_start(void){

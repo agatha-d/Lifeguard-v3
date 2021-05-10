@@ -25,13 +25,32 @@ static BSEMAPHORE_DECL(image_ready_sem, TRUE);
  *Returns the swimmer's width extracted from the image buffer given
  *Returns 0 if Swimmer not found
  */
+
+uint16_t swimmer_in_danger(uint8_t *buffer){//+swimmer_position = varibable globale
+
+	//2 choix : - sauver le swimmer que si celui ci est completement dans l'eau il a pied à la frontière
+	//- sauver le swimmer s'il est à la frontière plage/eau
+
+
+	/*if flanc montant ou flanc descendant de bleu //ou && si on veut completement dans l'eau
+	 * return 1
+	 *
+	 * else
+	 * return 0
+	 *
+	 * if flanc descendant
+	 */
+	return 0;
+}
+
+
 uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	uint16_t i = 0, begin = 0, end = 0;
 	uint8_t stop = 0;
 	uint32_t mean = 0;
 	int out = 0, end_of_buffer = 0;
-	static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //utile?
+	//static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //utile?
 
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){//average
@@ -41,6 +60,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	i=0;
 
 	mean /= IMAGE_BUFFER_SIZE;
+
+	//mean = average_buffer(buffer);
 
 	do{
 
@@ -125,6 +146,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	}
 
 	if(swimmer){
+
 		clear_leds();
 		//set_front_led(1);
 		//last_width = width = (end - begin);
@@ -180,8 +202,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t imr[IMAGE_BUFFER_SIZE] = {0}; // store red values
 	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
 	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
-	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0}; // red - blue - green
-	uint8_t im_diff_smooth[IMAGE_BUFFER_SIZE] = {0};
+	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // red - blue - green
+	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
 	int8_t tmp = 0;
 	uint16_t SwimmerWidth = 7;
 
@@ -210,18 +232,18 @@ static THD_FUNCTION(ProcessImage, arg) {
 			if (tmp <4){ // error message says it's always false
 				tmp = 0;
 			}
-			im_diff[i/2] = tmp;
+			im_diff_red[i/2] = tmp;
 		}
 
 		//Smoothing the signal to reduce noise with moving average
 		int n = 5;
 		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
 		{
-			im_diff_smooth[k] = (im_diff[k]+im_diff[k+1]+im_diff[k+2]
-									+ im_diff[k+3] + im_diff[k+4]
-									+ im_diff[k+5] + im_diff[k+6]
-									+ im_diff[k+7] + im_diff[k+8]
-									+ im_diff[k+9] /*+ im_diff[k+10]
+			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
+									+ im_diff_red[k+3] + im_diff_red[k+4]
+									+ im_diff_red[k+5] + im_diff_red[k+6]
+									+ im_diff_red[k+7] + im_diff_red[k+8]
+									+ im_diff_red[k+9] /*+ im_diff[k+10]
 									+ im_diff[k+11]+ im_diff[k+12]
 									+ im_diff[k+13]+ im_diff[k+14]
 									+ im_diff[k+15]+ im_diff[k+16]
@@ -232,16 +254,23 @@ static THD_FUNCTION(ProcessImage, arg) {
 									+ im_diff[k+25]+ im_diff[k+26]
 									+ im_diff[k+27]+ im_diff[k+28]
 									+ im_diff[k+29])*//10);//moving_average (im_diff, k, n);
+
+			//PLUTOT : im_diff_red_smooth[k] = smoothing(im_diff_red, k, 10);
+
+
+
 		}
 
 		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
 		{
-					im_diff_smooth[k] = im_diff[k];
+					im_diff_red_smooth[k] = im_diff_red[k];
 		}
 
 
 		//search for a swimmer in the image and gets its width in pixels
-		SwimmerWidth = extract_swimmer_width(im_diff);
+		//SwimmerWidth = extract_swimmer_width(im_diff);//euh la on utilise juste le im_diff???
+		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+
 
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
@@ -252,7 +281,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		if(send_to_computer){
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_smooth, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
+			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;
@@ -411,3 +440,30 @@ uint32_t average_buffer(uint8_t *buffer){
 
 	return mean;
 }
+
+
+uint32_t smoothing(uint8_t *buffer, int k, int n){
+
+	uint32_t im_diff_smooth = 0;
+
+	for(int j = 0; j<n; j++)
+	{
+		im_diff_smooth += buffer[k+j];
+	}
+	im_diff_smooth = im_diff_smooth/n;
+
+	return im_diff_smooth;
+
+}
+
+int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int i){
+
+	int8_t tmp = 0;
+
+	tmp = 2*buffer_diff[i/2] - buffer1[i/2] -buffer2[i/2]; // Substract buffer1 and buffer2 values in order to cancel red in other areas than swimmer
+	if (tmp <4){ // error message says it's always false
+		tmp = 0;
+	}
+			return tmp;
+}
+

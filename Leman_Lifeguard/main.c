@@ -19,6 +19,7 @@
 #include <navigation.h>
 #include <analyze_horizon.h>
 #include <navigation.h>
+#include <victory.h>
 #include <sensors/proximity.h>
 
 #include <audio/audio_thread.h>
@@ -86,6 +87,8 @@ int main(void)
     clear_leds();
     set_body_led(0);
     set_front_led(0);
+
+
     process_image_start();
 
     while(!all_swimmers_saved)
@@ -96,19 +99,31 @@ int main(void)
 				//set_body_led(1);
 				//set_led(LED6, 10);
 				search_swimmer_start();
-				if(get_empty_lake()){//if not swimmer found go to victory
-					set_body_led(0);
-					set_led(LED6, 1);
-					state = 3;
+
+				while(!get_analyse())
+				{
+					//set_front_led(1);
+					//attendre
 				}
-				state = 1;
+				//set_front_led(0);
+
+				if(get_analyse()){
+					if(get_empty_lake()){//if not swimmer found go to victory
+						state = 3;
+					}
+
+					if(!get_empty_lake()){//if swimmer found go to him (state 1)
+						state = 1;
+					}
+				}
 				break;
-			case 1://go to swimmers
+
+			case 1://pour le moment : arrive au bon moment ici, n'envoit plus d'image à l'ordinateur. C'est un pb car il fau
 				clear_leds();
 				set_body_led(0);
 				set_body_led(1);
 				//set_led(LED3, 1);
-				//go_to_swimmer_start();
+				//go_to_swimmer_start(); //->provoque la panic
 				//ajouter IR ici ou dans la thread ????
 				break;
 			case 2:
@@ -120,6 +135,12 @@ int main(void)
 				break;
 			case 3: //victory
 				clear_leds();
+
+				set_rgb_led(LED4, 1, 0, 0);
+				set_rgb_led(LED6, 1, 0, 0);
+
+				set_body_led(1);
+
 				//set_led(LED5, 1);
 				//start la bonne thread
 				//play victory music
@@ -128,6 +149,8 @@ int main(void)
 		}
     }
     clear_leds();
+    set_front_led(0);
+    set_body_led(0);
 	//Here : bring swimmers back on beach
 
 
