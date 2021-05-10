@@ -14,6 +14,8 @@
 
 static _Bool empty_lake = 0;
 
+//static _Bool analyse_done = 0;
+
 static BSEMAPHORE_DECL(lake_analyzed_sem, TRUE);
 
 //simple PI regulator implementation
@@ -60,8 +62,6 @@ static THD_FUNCTION(GoToSwimmer, arg) {
     volatile int16_t speed_correction = 0;
 
     static float sum_rot_error = 0;
-
-
 
     while(1){
 
@@ -120,19 +120,17 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     int initial_count = left_motor_get_pos();
 
 
-set_front_led(0);
-
     while(1){
 		time = chVTGetSystemTime();
 
-			while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT) && (!empty_lake)){
+		while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT)){// && (!empty_lake)){
 
-				//set_led(LED5, 10);
-				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-				left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
-				turn_count = (left_motor_get_pos() - initial_count);
-				swimmer_found = get_swimmer_width();
-			}
+			//set_led(LED5, 10);
+			right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+			left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+			turn_count = (left_motor_get_pos() - initial_count);
+			swimmer_found = get_swimmer_width();
+		}
 
 		//if (turn_count >= (2*HALF_TURN_COUNT)){ // condition à modifier pou cherche uniquement côté eau
 			//empty_lake = 1;

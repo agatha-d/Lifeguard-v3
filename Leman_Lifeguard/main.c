@@ -84,6 +84,8 @@ int main(void)
     _Bool all_swimmers_saved = 0;
 
     clear_leds();
+    set_body_led(0);
+    set_front_led(0);
     process_image_start();
 
     while(!all_swimmers_saved)
@@ -91,7 +93,7 @@ int main(void)
 		switch(state) {
 			case 0: // Search for swimmer to save
 				clear_leds();
-				set_body_led(1);
+				//set_body_led(1);
 				//set_led(LED6, 10);
 				search_swimmer_start();
 				if(get_empty_lake()){//if not swimmer found go to victory
@@ -103,20 +105,22 @@ int main(void)
 				break;
 			case 1://go to swimmers
 				clear_leds();
-				set_led(LED3, 1);
+				set_body_led(0);
+				set_body_led(1);
+				//set_led(LED3, 1);
 				//go_to_swimmer_start();
 				//ajouter IR ici ou dans la thread ????
 				break;
 			case 2:
 				clear_leds();
-				set_rgb_led(LED4, 1, 0, 0);
+				//set_rgb_led(LED4, 1, 0, 0);
 				//go_back_to_beach ou save_swimmer
 				// retour case 0
 				state = 0;
 				break;
 			case 3: //victory
 				clear_leds();
-				set_led(LED5, 1);
+				//set_led(LED5, 1);
 				//start la bonne thread
 				//play victory music
 				all_swimmers_saved = 1;
