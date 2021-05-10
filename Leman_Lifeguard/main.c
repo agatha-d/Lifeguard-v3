@@ -123,7 +123,7 @@ int main(void)
 				set_body_led(0);
 				set_body_led(1);
 				//set_led(LED3, 1);
-				//go_to_swimmer_start(); //->provoque la panic
+				go_to_swimmer_start(); //->causes panic
 				//ajouter IR ici ou dans la thread ????
 				break;
 			case 2:
