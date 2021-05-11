@@ -50,7 +50,7 @@ int16_t crawl_to_swimmer(float distance, float goal){
 		sum_error = -MAX_SUM_ERROR;
 	}
 
-	speed = KP * err; //
+	speed = KP * err + KI * sum_error; // avec ou sans KI ?
 	if(speed){
 	}
 	else{
@@ -81,7 +81,8 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 				//distance_cm is modified by the image processing thread
 
 				speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE);
-				if (get_distance_cm() <= GOAL_DISTANCE){ //test
+				//speed = MOTOR_SPEED_LIMIT/4; oscille et n'arrive pas à destination
+				if (get_distance_cm() <= GOAL_DISTANCE){ //test, change rien
 					speed = 0;
 				}
 				wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
@@ -115,7 +116,7 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 
 				// Test for IR implementation :
 				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5))){ // à modifier
-					while (get_prox(0) < 100){
+					while (get_prox(0) < 150){
 						right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
 						left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
 					}
