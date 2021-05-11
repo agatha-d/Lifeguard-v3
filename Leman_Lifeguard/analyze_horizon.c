@@ -138,7 +138,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	if(!swimmer){
 		//set_front_led(0);
-		set_led(LED3, 10);
+		//set_led(LED3, 10);
 		begin = 0;
 		end = 0;
 		//width = last_width;
@@ -207,9 +207,10 @@ static THD_FUNCTION(ProcessImage, arg) {
 	int8_t tmp = 0;
 	uint16_t SwimmerWidth = 7;
 
-	bool send_to_computer = true;
+	_Bool send_to_computer = true;
 
 	while(1){
+		//set_body_led(1);
 		//waits until an image has been captured
 		chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565    
@@ -236,14 +237,15 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//Smoothing the signal to reduce noise with moving average
-		int n = 5;
+		int n = 10;
 		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
 		{
 			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
 									+ im_diff_red[k+3] + im_diff_red[k+4]
 									+ im_diff_red[k+5] + im_diff_red[k+6]
 									+ im_diff_red[k+7] + im_diff_red[k+8]
-									+ im_diff_red[k+9] /*+ im_diff[k+10]
+									+ im_diff_red[k+9]/10);
+									/*+ im_diff[k+10]
 									+ im_diff[k+11]+ im_diff[k+12]
 									+ im_diff[k+13]+ im_diff[k+14]
 									+ im_diff[k+15]+ im_diff[k+16]
@@ -253,9 +255,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 									+ im_diff[k+23]+ im_diff[k+24]
 									+ im_diff[k+25]+ im_diff[k+26]
 									+ im_diff[k+27]+ im_diff[k+28]
-									+ im_diff[k+29])*//10);//moving_average (im_diff, k, n);
+									+ im_diff[k+29])10);//moving_average (im_diff, k, n);*/
 
-			//PLUTOT : im_diff_red_smooth[k] = smoothing(im_diff_red, k, 10);
+			//im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
 
 
 
@@ -269,7 +271,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//search for a swimmer in the image and gets its width in pixels
 		//SwimmerWidth = extract_swimmer_width(im_diff);//euh la on utilise juste le im_diff???
-		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+		SwimmerWidth = extract_swimmer_width(im_diff_red);
 
 
 		//converts the width into a distance between the robot and the camera
@@ -280,8 +282,12 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		if(send_to_computer){
+			//set_body_led(1);
+			set_front_led(1);
+			set_led(LED3, 10);
+
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
+			SendUint8ToComputer(im_diff_red, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
 		}
 		//invert the bool
 		send_to_computer = !send_to_computer;
@@ -464,6 +470,6 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 	if (tmp <4){ // error message says it's always false
 		tmp = 0;
 	}
-			return tmp;
+	return tmp;
 }
 

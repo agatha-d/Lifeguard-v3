@@ -54,7 +54,7 @@ int16_t crawl_to_swimmer(float distance, float goal){
 }
 
 // Must still add IR
-static THD_WORKING_AREA(waGoToSwimmer, 2048);
+static THD_WORKING_AREA(waGoToSwimmer, 512);
 static THD_FUNCTION(GoToSwimmer, arg) {//ATTENTION A LA SEMAPHORE ICI
 
 	chRegSetThreadName(__FUNCTION__);
@@ -67,13 +67,11 @@ static THD_FUNCTION(GoToSwimmer, arg) {//ATTENTION A LA SEMAPHORE ICI
 
     static float sum_rot_error = 0;
 
-    if(analyse_done)
-    {
+    //if(analyse_done)
+    //{
 		while(1){
 			if(mode==1)
 			{
-
-				//chBSemWait(&lake_analyzed_sem); ->A REMPLACER
 
 				time = chVTGetSystemTime();
 
@@ -106,13 +104,14 @@ static THD_FUNCTION(GoToSwimmer, arg) {//ATTENTION A LA SEMAPHORE ICI
 
 				right_motor_set_speed(speed - ROT_KP * speed_correction - ROT_KI*sum_rot_error);
 				left_motor_set_speed(speed + ROT_KP * speed_correction + ROT_KI*sum_rot_error);
+				set_front_led(1);
 
-				}
+			}
 
-				//100Hz
-				chThdSleepUntilWindowed(time, time + MS2ST(10));
+			//100Hz
+			chThdSleepUntilWindowed(time, time + MS2ST(10));
 		}
-	}
+	//}
 }
 
 void go_to_swimmer_start(void){
@@ -143,6 +142,8 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     //faire peut être une variable : analyse to be made??
 
     while(1){
+    	if(mode==0)
+    	{
 
     	/*if(!analyse_done)
 		{*/
@@ -162,7 +163,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			right_motor_set_speed(0);
 			left_motor_set_speed(0);
 
-			analyse_done = 1; //il faut la remettre à 0 quand on rerentre dans la thread
+		 //il faut la remettre à 0 quand on rerentre dans la thread
 
 			//A VOIRE SI C4EST UTILE
 		   if (swimmer_found){
@@ -174,6 +175,8 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				empty_lake = 1;
 				//set_front_led(0);
 			}
+
+		   analyse_done = 1;
 
 
 	   //chThdYield();
@@ -230,6 +233,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 	  // chBSemSignal(&lake_analyzed_sem); 	A REMPLACER
 
 		//100Hz
+    	}
 		chThdSleepUntilWindowed(time, time + MS2ST(10));
 		//}
     }
@@ -301,5 +305,11 @@ void go_straight(float distance){
 void switch_to_one(void)
 {
 	mode = 1;
+}
+
+
+void switch_to_zero(void)
+{
+	mode = 0;
 }
 

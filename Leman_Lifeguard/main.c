@@ -78,8 +78,6 @@ int main(void)
     calibrate_ir();
     motors_init();
 
-    go_to_swimmer_start();
-
 	//Here : search for swimmers
 
 	//stars the threads for the pi regulator and the processing of the image
@@ -91,17 +89,20 @@ int main(void)
     set_body_led(0);
     set_front_led(0);
 
-
     process_image_start();
+
+    search_swimmer_start();
+    go_to_swimmer_start();
+
 
     while(!all_swimmers_saved)
     {
 		switch(state) {
 			case 0: // Search for swimmer to save
+				switch_to_zero();
 				clear_leds();
 				//set_body_led(1);
 				//set_led(LED6, 10);
-				search_swimmer_start();
 
 				while(!get_analyse())
 				{
@@ -129,7 +130,7 @@ int main(void)
 				switch_to_one();
 				while(1)
 				{
-					set_body_led(1);
+					;
 				}
 				//set_led(LED3, 1);
 				//go_to_swimmer_start(); //->causes panic

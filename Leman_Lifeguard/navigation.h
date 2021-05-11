@@ -35,5 +35,7 @@ void go_straight(float distance);
 
 void switch_to_one(void);
 
+void switch_to_zero(void);
+
 
 #endif /* PI_REGULATOR_H */
