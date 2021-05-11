@@ -27,4 +27,6 @@ uint16_t get_swimmer_width(void);
 
 _Bool check_if_shore(uint8_t *buffer_blue, uint8_t *buffer_green);
 
+
+
 #endif /* PROCESS_IMAGE_H */

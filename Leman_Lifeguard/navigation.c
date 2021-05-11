@@ -16,6 +16,8 @@ static _Bool empty_lake = 0;
 
 static _Bool analyse_done = 0;
 
+static _Bool mode = 0;
+
 //static _Bool analyse_to_be_made = 1;
 
 //static BSEMAPHORE_DECL(lake_analyzed_sem, TRUE);
@@ -68,44 +70,49 @@ static THD_FUNCTION(GoToSwimmer, arg) {//ATTENTION A LA SEMAPHORE ICI
     if(analyse_done)
     {
 		while(1){
+			if(mode==1)
+			{
 
-			//chBSemWait(&lake_analyzed_sem); ->A REMPLACER
+				//chBSemWait(&lake_analyzed_sem); ->A REMPLACER
 
-			time = chVTGetSystemTime();
+				time = chVTGetSystemTime();
 
-			//computes the speed to give to the motors
-			//distance_cm is modified by the image processing thread
-			//speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE); // pour test rot seulement speed = 0
-			speed = 0;
-			//computes a correction factor to let the robot rotate to be in front of the line
-			volatile int16_t tmp = get_swimmer_position();
-			speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
+				//computes the speed to give to the motors
+				//distance_cm is modified by the image processing thread
+				//speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE); // pour test rot seulement speed = 0
+				speed = 0;
+				//computes a correction factor to let the robot rotate to be in front of the line
+
+				volatile int16_t tmp = get_swimmer_position();
+				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
 
 
-			if(sum_rot_error > MAX_ROT_ERROR){
-				sum_rot_error = MAX_ROT_ERROR;
-				}else if(sum_rot_error < -MAX_ROT_ERROR){
-					sum_rot_error = -MAX_ROT_ERROR;
+				if(sum_rot_error > MAX_ROT_ERROR){
+					sum_rot_error = MAX_ROT_ERROR;
+					}else if(sum_rot_error < -MAX_ROT_ERROR){
+						sum_rot_error = -MAX_ROT_ERROR;
+					}
+
+				//chprintf((BaseSequentialStream *)&SD3, "sum error : %f, speed correction : %d \n,", sum_rot_error, speed_correction);
+
+				//if the line is nearly in front of the camera, don't rotate
+				if(abs(speed_correction) < ROTATION_THRESHOLD){
+					speed_correction = 0;
 				}
 
-			//chprintf((BaseSequentialStream *)&SD3, "sum error : %f, speed correction : %d \n,", sum_rot_error, speed_correction);
+				sum_rot_error += speed_correction;
 
-			//if the line is nearly in front of the camera, don't rotate
-			if(abs(speed_correction) < ROTATION_THRESHOLD){
-				speed_correction = 0;
-			}
-			sum_rot_error += speed_correction;
+				//applies the speed from the PI regulator and the correction for the rotation
 
-			//applies the speed from the PI regulator and the correction for the rotation
+				right_motor_set_speed(speed - ROT_KP * speed_correction - ROT_KI*sum_rot_error);
+				left_motor_set_speed(speed + ROT_KP * speed_correction + ROT_KI*sum_rot_error);
 
-			right_motor_set_speed(speed - ROT_KP * speed_correction - ROT_KI*sum_rot_error);
-			left_motor_set_speed(speed + ROT_KP * speed_correction + ROT_KI*sum_rot_error);
+				}
 
-			//100Hz
-			chThdSleepUntilWindowed(time, time + MS2ST(10));
+				//100Hz
+				chThdSleepUntilWindowed(time, time + MS2ST(10));
 		}
-    }
-
+	}
 }
 
 void go_to_swimmer_start(void){
@@ -223,11 +230,9 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 	  // chBSemSignal(&lake_analyzed_sem); 	A REMPLACER
 
 		//100Hz
-		//chThdSleepUntilWindowed(time, time + MS2ST(10));
+		chThdSleepUntilWindowed(time, time + MS2ST(10));
 		//}
     }
-
-
 }
 
 _Bool get_empty_lake(void){
@@ -237,8 +242,6 @@ _Bool get_empty_lake(void){
 _Bool get_analyse(void){
 	return analyse_done;
 }
-
-
 
 void search_swimmer_start(void){
 	chThdCreateStatic(waSearchSwimmer, sizeof(waSearchSwimmer), NORMALPRIO, SearchSwimmer, NULL);
@@ -293,5 +296,10 @@ void go_straight(float distance){
 	}
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
+}
+
+void switch_to_one(void)
+{
+	mode = 1;
 }
 

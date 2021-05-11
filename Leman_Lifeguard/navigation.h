@@ -33,5 +33,7 @@ void turn_left(int turn_count);
 void turn_right(int turn_count);
 void go_straight(float distance);
 
+void switch_to_one(void);
+
 
 #endif /* PI_REGULATOR_H */

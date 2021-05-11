@@ -28,6 +28,7 @@
 
 /* ======================================= */
 
+//capteu de prox : 10 -> 100 Hz
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
@@ -77,6 +78,8 @@ int main(void)
     calibrate_ir();
     motors_init();
 
+    go_to_swimmer_start();
+
 	//Here : search for swimmers
 
 	//stars the threads for the pi regulator and the processing of the image
@@ -118,12 +121,18 @@ int main(void)
 				}
 				break;
 
-			case 1://pour le moment : arrive au bon moment ici, n'envoit plus d'image à l'ordinateur. C'est un pb car il fau
+			case 1:
+				//pour le moment : arrive au bon moment ici, n'envoit plus d'image à l'ordinateur. C'est un pb car il fau
 				clear_leds();
 				set_body_led(0);
-				set_body_led(1);
+				//set_body_led(1);
+				switch_to_one();
+				while(1)
+				{
+					set_body_led(1);
+				}
 				//set_led(LED3, 1);
-				go_to_swimmer_start(); //->causes panic
+				//go_to_swimmer_start(); //->causes panic
 				//ajouter IR ici ou dans la thread ????
 				break;
 			case 2:
