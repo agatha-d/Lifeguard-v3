@@ -20,30 +20,133 @@ static uint16_t width = 0;
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
+void wait_im_ready(void){
+chBSemWait(&image_ready_sem);
+}
+
+static THD_WORKING_AREA(waCaptureImage, 256);
+static THD_FUNCTION(CaptureImage, arg) {
+
+    chRegSetThreadName(__FUNCTION__);
+    (void)arg;
+
+	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 170 + 170 (minimum 2 lines because reasons)
+	po8030_advanced_config(FORMAT_RGB565, 0, 170, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	dcmi_enable_double_buffering();
+	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
+	dcmi_prepare();
+
+    while(1){
+        //starts a capture
+		dcmi_capture_start();
+		//waits for the capture to be done
+		wait_image_ready();
+		//signals an image has been captured
+		chBSemSignal(&image_ready_sem);
+    }
+}
+
+
+static THD_WORKING_AREA(waProcessImage, 4096);
+static THD_FUNCTION(ProcessImage, arg) {
+
+	chRegSetThreadName(__FUNCTION__);
+	(void)arg;
+
+	uint8_t *img_buff_ptr;
+
+	uint8_t imr[IMAGE_BUFFER_SIZE] = {0}; // store red values
+	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
+	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
+
+	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // 2*red - blue - green
+	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
+
+	int8_t tmp = 0;
+	uint16_t SwimmerWidth = 0; // 6, why not zero by default ???????
+
+	_Bool send_to_computer = true;
+
+	while(1){
+		//set_body_led(1);
+		//waits until an image has been captured
+		chBSemWait(&image_ready_sem);
+		//gets the pointer to the array filled with the last image in RGB565
+		img_buff_ptr = dcmi_get_last_image_ptr();
+
+		/* Separate RGB values for each pixel
+		 * The MSB for the three colors are aligned on the bit 6
+		 * Big endian format
+		 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
+		 * Next pixel = img_buff_pointer[i+2]
+		 */
+		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+
+			imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8) >> 2;
+			img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
+			imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
+
+			tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
+			if (tmp <4){
+				tmp = 0;
+			}
+			im_diff_red[i/2] = tmp;
+		}
+
+		//Smoothing the signal to reduce noise with moving average
+		int n = 10;
+		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
+		{
+			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
+									+ im_diff_red[k+3] + im_diff_red[k+4]
+									+ im_diff_red[k+5] + im_diff_red[k+6]
+									+ im_diff_red[k+7] + im_diff_red[k+8]
+									+ im_diff_red[k+9])/10;
+
+									/*+ im_diff[k+10]
+									+ im_diff[k+11]+ im_diff[k+12]
+									+ im_diff[k+13]+ im_diff[k+14]
+									+ im_diff[k+15]+ im_diff[k+16]
+									+ im_diff[k+17]+ im_diff[k+18]
+									+ im_diff[k+19]+ im_diff[k+20]
+									+ im_diff[k+21]+ im_diff[k+22]
+									+ im_diff[k+23]+ im_diff[k+24]
+									+ im_diff[k+25]+ im_diff[k+26]
+									+ im_diff[k+27]+ im_diff[k+28]
+									+ im_diff[k+29])10);//moving_average (im_diff, k, n);*/
+
+			im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
+		}
+
+		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
+		{
+					im_diff_red_smooth[k] = im_diff_red[k];
+		}
+
+		//search for a swimmer in the image and gets its width in pixels
+		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+
+		//converts the width into a distance between the robot and the camera
+		if(SwimmerWidth){
+			set_led(LED3, 1);
+			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles
+		}
+
+		if(send_to_computer){
+
+			//sends to the computer the image
+			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+		}
+		//invert the bool : only shows 1 image out of 2
+		send_to_computer = !send_to_computer;
+	    }
+	}
+
 
 /*
  *Returns the swimmer's width extracted from the image buffer given
  *Returns 0 if Swimmer not found
  */
-
-uint16_t swimmer_in_danger(uint8_t *buffer){//+swimmer_position = varibable globale
-
-	//2 choix : - sauver le swimmer que si celui ci est completement dans l'eau il a pied à la frontière
-	//- sauver le swimmer s'il est à la frontière plage/eau
-
-
-	/*if flanc montant ou flanc descendant de bleu //ou && si on veut completement dans l'eau
-	 * return 1
-	 *
-	 * else
-	 * return 0
-	 *
-	 * if flanc descendant
-	 */
-	return 0;
-}
-
-
 uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	uint16_t i = 0, begin = 0, end = 0;
@@ -52,8 +155,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	int out = 0, end_of_buffer = 0;
 	//static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //utile?
 
-
-	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){//average
+	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){ //Performs an average
 		mean += buffer[i];
 	}
 
@@ -61,34 +163,32 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	mean /= IMAGE_BUFFER_SIZE;
 
-	//mean = average_buffer(buffer);
+	//mean = average_buffer(buffer); // what difference ??
 
 	do{
 
-		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) //search for a begin: rise in color intensity
+		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) //search for a begin = rise in color intensity
 		{
-
-			 if((buffer[i] > (mean+1)) && (buffer[i-WIDTH_SLOPE] <= mean)) //si flanc montant
+			 if((buffer[i] > (mean+1)) && (buffer[i-WIDTH_SLOPE] <= mean)) // If rise
 			 {
 				 begin = i;
 				 stop = 1;
-
 			 }
 			 i++;
 		}
-		if(!begin)//abscence flanc montant ->sortie de do...while
+		if(!begin) //If no begin was found, get out of loop
 		{
 			swimmer = 0;
 			end_of_buffer = 1;
 		}
 
-		if (begin) { //if a begin was found, search for an end : fall of color intensity
+		if (begin) { //if a begin was found, search for an end = fall of color intensity
 
 		    stop = 0;
 		    
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE)
 		    {
-		    	if((buffer[i] > (mean+1))  && (buffer[i+WIDTH_SLOPE] <= mean)) //si flanc descendant
+		    	if((buffer[i] > (mean+1))  && (buffer[i+WIDTH_SLOPE] <= mean)) // If fall
 		        {
 		        	end = i;
 		            stop = 1;
@@ -97,15 +197,14 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		        i++;
 		    }
 
-		    if (!end) //if an end was not found ->sortie de la boucle
+		    if (!end) //if no end was not found, get out of loop
 		    {
 		        //swimmer_not_found = 1;
 		        swimmer = 0;
 		    }
 		}
 
-		if(end && ((end-begin) < MIN_LINE_WIDTH)){//if a swimmer too small has been detected, continues the search
-
+		if(end && ((end-begin) < MIN_LINE_WIDTH)){ //if a swimmer too small has been detected, ignore & continues the search
 			i = end;
 			begin = 0;
 			end = 0;
@@ -154,10 +253,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		swimmer_position = (begin + end)/2; //gives the swimmer position.
 	}
 
-	//chprintf((BaseSequentialStream *) &SDU1, "position : %d\n", swimmer_position);
-
-
-	//sets a maximum width or returns the measured width ->à verifier
+	//sets a maximum width or returns the measured width ->à verifier (chager paramètres par rapport à la vraie taille de la balle et coeff
 	/*if(width){
 		if((PXTOCM/width) > MAX_DISTANCE){
 			return PXTOCM/MAX_DISTANCE;
@@ -165,134 +261,10 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	}
 	else{
 		*/
-	return width; // width = 0, not a swimmer
+	return width; // width = 0 -> no swimmer
 }
 
 
-static THD_WORKING_AREA(waCaptureImage, 256);
-static THD_FUNCTION(CaptureImage, arg) {
-
-    chRegSetThreadName(__FUNCTION__);
-    (void)arg;
-
-	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 10 + 11 (minimum 2 lines because reasons), choix ligne ???? semple voir le sol 15 cm devant lui pour l'instant => prendre plus haut
-	po8030_advanced_config(FORMAT_RGB565, 0, 170, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1); // voir si 10 assez b
-	dcmi_enable_double_buffering();
-	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
-	dcmi_prepare();
-
-    while(1){
-        //starts a capture
-		dcmi_capture_start();
-		//waits for the capture to be done
-		wait_image_ready();
-		//signals an image has been captured
-		chBSemSignal(&image_ready_sem);
-    }
-}
-
-
-static THD_WORKING_AREA(waProcessImage, 4096);
-static THD_FUNCTION(ProcessImage, arg) {
-
-	chRegSetThreadName(__FUNCTION__);
-	(void)arg;
-
-	uint8_t *img_buff_ptr;
-	uint8_t imr[IMAGE_BUFFER_SIZE] = {0}; // store red values
-	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
-	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
-	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // red - blue - green
-	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
-	int8_t tmp = 0;
-	uint16_t SwimmerWidth = 7;
-
-	_Bool send_to_computer = true;
-
-	while(1){
-		//set_body_led(1);
-		//waits until an image has been captured
-		chBSemWait(&image_ready_sem);
-		//gets the pointer to the array filled with the last image in RGB565    
-		img_buff_ptr = dcmi_get_last_image_ptr();
-
-		/* Separate RGB values for each pixel
-		 * The MSB for the three colors are aligned on the bit 6
-		 * Big endian format
-		 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
-		 * Next pixel = img_buff_pointer[i+2]
-		 */
-
-		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
-
-			imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8) >> 2;
-			img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
-			imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
-
-			tmp = 2*imr[i/2] - imb[i/2] -img[i/2];//abs(2*imr[i/2] - imb[i/2] -img[i/2]); // Substract blue and green values in order to cancel red in other areas than swimmer
-			if (tmp <4){ // error message says it's always false
-				tmp = 0;
-			}
-			im_diff_red[i/2] = tmp;
-		}
-
-		//Smoothing the signal to reduce noise with moving average
-		int n = 10;
-		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
-		{
-			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
-									+ im_diff_red[k+3] + im_diff_red[k+4]
-									+ im_diff_red[k+5] + im_diff_red[k+6]
-									+ im_diff_red[k+7] + im_diff_red[k+8]
-									+ im_diff_red[k+9]/10);
-									/*+ im_diff[k+10]
-									+ im_diff[k+11]+ im_diff[k+12]
-									+ im_diff[k+13]+ im_diff[k+14]
-									+ im_diff[k+15]+ im_diff[k+16]
-									+ im_diff[k+17]+ im_diff[k+18]
-									+ im_diff[k+19]+ im_diff[k+20]
-									+ im_diff[k+21]+ im_diff[k+22]
-									+ im_diff[k+23]+ im_diff[k+24]
-									+ im_diff[k+25]+ im_diff[k+26]
-									+ im_diff[k+27]+ im_diff[k+28]
-									+ im_diff[k+29])10);//moving_average (im_diff, k, n);*/
-
-			//im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
-
-
-
-		}
-
-		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
-		{
-					im_diff_red_smooth[k] = im_diff_red[k];
-		}
-
-
-		//search for a swimmer in the image and gets its width in pixels
-		//SwimmerWidth = extract_swimmer_width(im_diff);//euh la on utilise juste le im_diff???
-		SwimmerWidth = extract_swimmer_width(im_diff_red);
-
-
-		//converts the width into a distance between the robot and the camera
-		if(SwimmerWidth){
-			//set_led(LED3, 1);
-			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles
-
-		}
-
-		if(send_to_computer){
-			//set_body_led(1);
-			set_front_led(1);
-			set_led(LED3, 10);
-
-			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red, IMAGE_BUFFER_SIZE); //Optional, only for visialisation
-		}
-		//invert the bool
-		send_to_computer = !send_to_computer;
-	    }
-	}
 
 float get_distance_cm(void){
 	return distance_cm;
@@ -308,11 +280,34 @@ uint16_t get_swimmer_width(void){
 
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
+	}
+
+void capture_image_start(void){
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 	}
 
+
 //   Analysis of the environnement
 /* ====================================================================== */
+
+uint16_t swimmer_in_danger(uint8_t *buffer){//+swimmer_position = varibable globale
+
+	//2 choix : - sauver le swimmer que si celui ci est completement dans l'eau il a pied à la frontière
+	//- sauver le swimmer s'il est à la frontière plage/eau
+
+	// utiliser fonctions check if shore et sea or beach à la fin du doc, éventuellement à modifier
+	//car pas testées et écrites il y la longtemps
+
+	/*if flanc montant ou flanc descendant de bleu //ou && si on veut completement dans l'eau
+	 * return 1
+	 *
+	 * else
+	 * return 0
+	 *
+	 * if flanc descendant
+	 */
+	return 0;
+}
 
 /*
 int check_sea_or_beach(uint16_t position, uint16_t size, uint8_t *buffer_b, uint8_t *buffer_g){
@@ -387,6 +382,7 @@ _Bool check_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
 	return shore;
 }
 
+
 //	General geometric functions
 /* =================================================*/
 
@@ -434,7 +430,9 @@ uint16_t falling_slope(uint8_t *buffer){
 	return end;
 }
 
-
+/*
+ * Performs the average of the values of a buffer
+ */
 uint32_t average_buffer(uint8_t *buffer){
 
 	uint32_t mean = 0;
@@ -447,8 +445,12 @@ uint32_t average_buffer(uint8_t *buffer){
 	return mean;
 }
 
-
-uint32_t smoothing(uint8_t *buffer, int k, int n){
+/*
+ * Applies a moving average on a buffer
+ * each cell of the buffer will be attributed the value of the average of the 5 neigbouring cells.
+ * The aim is to smooth a signal and therefore reduce noise
+ */
+uint32_t smoothing(uint8_t *buffer, int k, int n){ // n'a as l'air de fonctionner quand on prend la fonction, pourqoiiiiii ?
 
 	uint32_t im_diff_smooth = 0;
 

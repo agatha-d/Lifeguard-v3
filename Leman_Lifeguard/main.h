@@ -15,8 +15,8 @@ extern "C" {
 #define IMAGE_VERTICAL_SIZE		480
 #define WIDTH_SLOPE				5 // original : 5
 #define MIN_LINE_WIDTH			40 // original : 40
-#define PXTOCM					2703.8f //experimental value depending on swimmer size
-#define GOAL_DISTANCE 			5.0f
+#define PXTOCM					2500.0f //2703.8f //experimental value depending on swimmer size
+#define GOAL_DISTANCE 			5.0f   //5.0f avec PXTOCM = 2000 en fait s'arrête àune quinzaine
 #define MAX_DISTANCE 			25.0f
 
 

@@ -5,7 +5,11 @@ float get_distance_cm(void);
 
 uint16_t get_swimmer_position(void);
 
+void capture_image_start(void);
+
 void process_image_start(void);
+
+void wait_im_ready(void);
 
 uint16_t swimmer_in_danger(uint8_t *buffer);
 
