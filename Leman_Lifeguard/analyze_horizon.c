@@ -23,6 +23,8 @@ static uint16_t width = 0;
 uint16_t left_shore_position = 0;
 uint16_t right_shore_position = 0;
 
+int shore_to_search=0; //=1 pour le shore left et 2 pour le shore right
+
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
@@ -37,7 +39,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 170 + 170 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 165, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 250, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -136,13 +138,19 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//search for a swimmer in the image and gets its width in pixels
 		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
-		left_shore = extract_shore(imb, img, im_diff_red_smooth);
-		right_shore = extract_right_shore(imb, img, im_diff_red_smooth);
+		if(shore_to_search == 1)
+		{
+			left_shore = extract_shore(imb, img);
+		}
+		if(shore_to_search == 2)
+		{
+			right_shore = extract_right_shore(imb, img);
+		}
 
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
 			//set_led(LED3, 1);
-			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles
+			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM à la taille des balles
 		}
 
 		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
@@ -157,7 +165,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		if(send_to_computer){
 
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_blue, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
 		}
 		//invert the bool : only shows 1 image out of 2
 		send_to_computer = !send_to_computer;
@@ -275,14 +283,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		swimmer_position = (begin + end)/2; //gives the swimmer position.
 	}
 
-	//sets a maximum width or returns the measured width ->à verifier (chager paramètres par rapport à la vraie taille de la balle et coeff
-	/*if(width){
-		if((PXTOCM/width) > MAX_DISTANCE){
-			return PXTOCM/MAX_DISTANCE;
-		}
-	}
-	else{
-		*/
+
 	return width; // width = 0 -> no swimmer
 }
 
@@ -297,7 +298,7 @@ uint16_t get_swimmer_position(void){
 }
 
 uint16_t get_swimmer_width(void){
-	set_front_led(1);
+	//set_front_led(1);
 	return width;
 }
 
@@ -316,84 +317,6 @@ void process_image_start(void){
 void capture_image_start(void){
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
-
-
-//   Analysis of the environnement
-/* ====================================================================== */
-
-
-/*
-int check_sea_or_beach(uint16_t position, uint16_t size, uint8_t *buffer_b, uint8_t *buffer_g){
-
-	int zone = 0; // water = 1, beach = 0
-
-	// Prend une photo verticale au centre de la balle
-	uint16_t vert_array = size + 50;
-	if (vert_array > IMAGE_VERTICAL_SIZE) {
-		vert_array = IMAGE_VERTICAL_SIZE;
-	}
-
-	po8030_advanced_config(FORMAT_RGB565, position, 1, 2 , vert_array, SUBSAMPLING_X1, SUBSAMPLING_X1);
-	dcmi_enable_double_buffering();
-	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
-	dcmi_prepare();
-
-    //starts a capture
-	dcmi_capture_start();
-	//waits for the capture to be done
-	wait_image_ready();
-
-	//détection flanc descendant et montant de bleu
-	//détection flanc de vert
-
-	uint8_t v_blue[vert_array] = {0}; // store blue values
-	uint8_t v_green[vert_array] = {0}; // store green values
-
-	//Extracts RGB intensity values for each pixels
-	for(uint16_t i = 0 ; i < (2 *vert_array) ; i+=2){
-			v_green[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
-			v_blue[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
-		}
-
-	return zone;
-}
-*/
-
-/*_Bool check_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
-{
-	_Bool left_shore = 0;
-	uint16_t begin_blue = rising_slope(buffer_blue);
-
-	if (begin_blue)//flanc montant de bleu
-	{
-		uint16_t end_green = falling_slope(buffer_green);
-
-		if(end_green)//flanc montant de vert près du flanc montant de bleu
-		{
-			left_shore = 1;
-			//enable_front_led();
-		}
-	}
-	return left_shore;
-}*/
-
-/*_Bool check_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
-{
-	_Bool right_shore = 0;
-	uint16_t end_blue = falling_slope(buffer_blue);
-
-	if (end_blue)
-	{
-		uint16_t begin_green = rising_slope(buffer_green);
-
-		if(begin_green)//rising slope of green after falling slope of ble
-		{
-			right_shore = 1;
-			//enable_front_led();
-		}
-	}
-	return right_shore;
-}*/
 
 
 //	General geometric functions
@@ -490,7 +413,7 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 
 
 //à faire : changer pour qu'il faille juste échanger les buffer_blue et green dans l'appel de fonction
-int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
+int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 
 	int8_t tmp = 0;
 	int stop = 0;
@@ -527,7 +450,7 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_r
 }
 
 //pour le moment deux fct différentes (temporaire)
-int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
+int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 
 	int8_t tmp = 0;
 	int stop = 0;
@@ -568,3 +491,20 @@ int get_right_shore(void)
 {
 	return right_shore;
 }
+
+
+void clear_shore(void)
+{
+	shore_to_search = 0;
+}
+
+void search_left_shore(void)
+{
+	shore_to_search =1;
+}
+
+void search_right_shore(void)
+{
+	shore_to_search =2;
+}
+

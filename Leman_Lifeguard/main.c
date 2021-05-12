@@ -67,16 +67,17 @@ int main(void)
     serial_start();
     usb_start();
     dcmi_start(); //starts the camera
+
     po8030_start();
     po8030_set_ae(0); //test disable auto exposure 0=disable, 1 = able
     po8030_set_awb(0); // test disable auto white balance0=disable, 1 = able
     po8030_set_rgb_gain(0x20, 0x20, 0x20); // test same gain =1 for every color
+
     dac_start();
     playMelodyStart();
     proximity_start(); //init the IR sensors
     calibrate_ir();
     motors_init();
-
 
     clear_leds();
     set_body_led(0);
@@ -115,13 +116,13 @@ int main(void)
 
 				if(get_lake_scanned()){
 					//if ok car dans boucle while et que state ne change que en fonction de get empty lake => reste bien toujours dans la thread
-					set_body_led(1);
+					//set_body_led(1);
 					if(get_empty_lake()){	//if not swimmer found go to victory
 						state = 3;
 					}
 
 					if(!get_empty_lake()){	//if swimmer found go to swimmer
-						set_front_led(1);
+						//set_front_led(1);
 						state = 1;
 					}
 				}
@@ -144,17 +145,13 @@ int main(void)
 				turn_left(HALF_TURN_COUNT, 10);
 				go_straight(2000);
 				turn_right(HALF_TURN_COUNT, 10);
-				//clear_ready_to_save();
 
-				clear_ready_to_save();
-
+				clear_ready_to_save();//????
 
 				state = 3;
 
-
 				clear_leds();
-				//set_rgb_led(LED4, 1, 0, 0);
-				// retour case 0
+
 				state = 0;
 				break;
 
@@ -166,7 +163,7 @@ int main(void)
 
 				//victory
 				clear_leds();
-				set_body_led(1);
+				//set_body_led(1);
 
 				//victory_start(); //vérifier qu'elle ne joue qu'une fois
 				init_before_switch(); // empecher le code de retourner dans un mode du switch
@@ -175,7 +172,7 @@ int main(void)
 		}
     }
     clear_leds();
-    set_front_led(0);
+    set_front_led(1);
     set_body_led(0);
 	//Here : bring swimmers back on beach
 

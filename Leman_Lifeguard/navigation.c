@@ -159,13 +159,19 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     	{
     		wait_im_ready();
 
-    		while(!get_left_shore()){
+    		search_left_shore();
 
-    			right_motor_set_speed(-MOTOR_SPEED_LIMIT/20);
-    			left_motor_set_speed(+MOTOR_SPEED_LIMIT/20);
+    		while((!get_left_shore()) && (abs(get_left_shore_position() - IMAGE_BUFFER_SIZE/2))>20){
+
+
+    			right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
+    			left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 
     		}
 
+
+
+    		   	/*
     		if(get_left_shore())
     		{
     			//set_led(LED3, 1);
@@ -174,13 +180,15 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     			left_motor_set_speed(0);
     			//wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
 
+    			while()
+
     			while(speed_correction)
     			{
     				volatile int16_t tmp = get_left_shore_position();
 
     				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
     						//if the line is nearly in front of the camera, don't rotate
-    				if(abs(speed_correction) < 25){//changer
+    				if(abs(speed_correction) < 20){//changer
     					speed_correction = 0;
     				}
 
@@ -190,20 +198,21 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     			}
     			clear_leds();
-    		}
+    		}*/
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
 			step_to_turn = 0;
 			wait_im_ready();
-			speed_correction =1;
+			//speed_correction =1;
 			initial_count = left_motor_get_pos();
+			search_right_shore();
 
 			while((!swimmer_found) && (!get_right_shore()))
 			{
 				//wait_im_ready();
-				right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
-				left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
+				right_motor_set_speed(-MOTOR_SPEED_LIMIT/5);
+				left_motor_set_speed(+MOTOR_SPEED_LIMIT/5);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
 				set_led(LED3, 1);
@@ -215,7 +224,11 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				{
 					set_front_led(1);
 				}*/
+				set_body_led(1);
 			}
+
+			clear_shore();
+
 			set_front_led(0);
 			set_led(LED3, 0);
 			right_motor_set_speed(0);
@@ -226,12 +239,15 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				set_led(LED5, 1);
 				empty_lake = 0;
 				step_to_turn = (HALF_TURN_COUNT/2) - turn_count;
+				set_body_led(0);
 			}
 
 			if (!swimmer_found){
 				set_led(LED7, 1);
 				empty_lake = 1;
 				step_to_turn = 0;
+				set_body_led(1);
+
 			}
 
 			lake_scanned = 1;
