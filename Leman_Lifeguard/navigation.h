@@ -24,15 +24,19 @@ void search_swimmer_start(void);
 void go_to_swimmer_start(void);
 
 // Simple navigation functions
-void turn_left(int turn_count);
-void turn_right(int turn_count);
+void turn_right(int turn_count, int div);
+void turn_left(int turn_count, int div);
 void go_straight(float distance);
+
+void clear_ready_to_save(void);
 
 // Return static variables
 _Bool get_empty_lake(void);
 _Bool get_lake_scanned(void);
 _Bool get_empty_lake(void);
 _Bool get_ready_to_save(void);
+uint16_t get_left_shore_position(void);
+int get_step_to_turn(void);
 
 // Enable selection of thread to run
 void init_before_switch(void);

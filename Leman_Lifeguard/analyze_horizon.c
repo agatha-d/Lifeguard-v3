@@ -15,13 +15,19 @@ static uint16_t swimmer_position = IMAGE_BUFFER_SIZE/2;	//middle
 
 static int swimmer = 0;
 
+static int left_shore = 0;
+static int right_shore = 0;
+
 static uint16_t width = 0;
+
+uint16_t left_shore_position = 0;
+uint16_t right_shore_position = 0;
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
 
 void wait_im_ready(void){
-chBSemWait(&image_ready_sem);
+	chBSemWait(&image_ready_sem);
 }
 
 static THD_WORKING_AREA(waCaptureImage, 256);
@@ -31,7 +37,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 170 + 170 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 170, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 165, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -61,6 +67,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // 2*red - blue - green
 	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
+
+	uint8_t im_diff_blue[IMAGE_BUFFER_SIZE] = {0};
+
 
 	int8_t tmp = 0;
 	uint16_t SwimmerWidth = 0; // 6, why not zero by default ???????
@@ -103,7 +112,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 									+ im_diff_red[k+7] + im_diff_red[k+8]
 									+ im_diff_red[k+9])/10;
 
-									/*+ im_diff[k+10]
+				//sert à rien vu que l'on le rechange juste après
+			/*+ im_diff[k+10]
 									+ im_diff[k+11]+ im_diff[k+12]
 									+ im_diff[k+13]+ im_diff[k+14]
 									+ im_diff[k+15]+ im_diff[k+16]
@@ -126,21 +136,32 @@ static THD_FUNCTION(ProcessImage, arg) {
 		//search for a swimmer in the image and gets its width in pixels
 		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
+		left_shore = extract_shore(imb, img, im_diff_red_smooth);
+
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
-			set_led(LED3, 1);
+			//set_led(LED3, 1);
 			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM par rapport à la taille des balles
+		}
+
+		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+
+				tmp = img[i/2]- imb[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
+				if (tmp <1){
+					tmp = 0;
+				}
+				im_diff_blue[i/2] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
 		}
 
 		if(send_to_computer){
 
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+			SendUint8ToComputer(im_diff_blue, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
 		}
 		//invert the bool : only shows 1 image out of 2
 		send_to_computer = !send_to_computer;
-	    }
 	}
+}
 
 
 /*
@@ -246,7 +267,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	if(swimmer){
 
-		clear_leds();
+		//clear_leds();
 		//set_front_led(1);
 		//last_width = width = (end - begin);
 		width = (end - begin);
@@ -275,39 +296,30 @@ uint16_t get_swimmer_position(void){
 }
 
 uint16_t get_swimmer_width(void){
+	set_front_led(1);
 	return width;
+}
+
+uint16_t get_left_shore_position(void){
+	return left_shore_position;
+}
+
+int get_left_shore(void){
+	return left_shore;
 }
 
 void process_image_start(void){
 	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
-	}
+}
 
 void capture_image_start(void){
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
-	}
+}
 
 
 //   Analysis of the environnement
 /* ====================================================================== */
 
-uint16_t swimmer_in_danger(uint8_t *buffer){//+swimmer_position = varibable globale
-
-	//2 choix : - sauver le swimmer que si celui ci est completement dans l'eau il a pied à la frontière
-	//- sauver le swimmer s'il est à la frontière plage/eau
-
-	// utiliser fonctions check if shore et sea or beach à la fin du doc, éventuellement à modifier
-	//car pas testées et écrites il y la longtemps
-
-	/*if flanc montant ou flanc descendant de bleu //ou && si on veut completement dans l'eau
-	 * return 1
-	 *
-	 * else
-	 * return 0
-	 *
-	 * if flanc descendant
-	 */
-	return 0;
-}
 
 /*
 int check_sea_or_beach(uint16_t position, uint16_t size, uint8_t *buffer_b, uint8_t *buffer_g){
@@ -346,9 +358,9 @@ int check_sea_or_beach(uint16_t position, uint16_t size, uint8_t *buffer_b, uint
 }
 */
 
-_Bool check_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
+/*_Bool check_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
 {
-	_Bool shore = 0;
+	_Bool left_shore = 0;
 	uint16_t begin_blue = rising_slope(buffer_blue);
 
 	if (begin_blue)//flanc montant de bleu
@@ -357,16 +369,16 @@ _Bool check_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
 
 		if(end_green)//flanc montant de vert près du flanc montant de bleu
 		{
-			shore = 1;
+			left_shore = 1;
 			//enable_front_led();
 		}
 	}
-	return shore;
-}
+	return left_shore;
+}*/
 
-_Bool check_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
+/*_Bool check_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
 {
-	_Bool shore = 0;
+	_Bool right_shore = 0;
 	uint16_t end_blue = falling_slope(buffer_blue);
 
 	if (end_blue)
@@ -375,12 +387,12 @@ _Bool check_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green)
 
 		if(begin_green)//rising slope of green after falling slope of ble
 		{
-			shore = 1;
+			right_shore = 1;
 			//enable_front_led();
 		}
 	}
-	return shore;
-}
+	return right_shore;
+}*/
 
 
 //	General geometric functions
@@ -475,3 +487,76 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 	return tmp;
 }
 
+
+//il faudra juste échanger les buffer_blue et green dans l'appel de fonction
+int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
+
+	int8_t tmp = 0;
+	int stop = 0;
+	uint16_t i = 0;
+
+	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
+
+
+	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
+
+		tmp = buffer_green[i]- buffer_blue[i];
+		if (tmp <1){
+			tmp = 0;
+		}
+		im_diff[i] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
+	}
+
+	left_shore = 0;
+	stop = 0;
+
+	i = 10;
+
+	while((i < IMAGE_BUFFER_SIZE)&&(!stop))
+	{
+		if((im_diff[i]==0)&& (im_diff[i-10]>0))
+		{
+			stop = 1;
+			left_shore = 1;
+			left_shore_position = i;
+		}
+		i++;
+	}
+	return left_shore ;
+}
+
+int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
+
+	int8_t tmp = 0;
+	int stop = 0;
+	uint16_t i = 0;
+
+	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
+
+
+	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
+
+		tmp = buffer_blue[i]- buffer_green[i];
+		if (tmp <1){
+			tmp = 0;
+		}
+		im_diff[i] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
+	}
+
+	right_shore = 0;
+	stop = 0;
+
+	i = 10;
+
+	while((i < IMAGE_BUFFER_SIZE)&&(!stop))
+	{
+		if((im_diff[i]==0)&& (im_diff[i-10]>0))
+		{
+			stop = 1;
+			right_shore = 1;
+			right_shore_position = i;
+		}
+		i++;
+	}
+	return right_shore ;
+}

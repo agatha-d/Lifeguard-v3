@@ -5,13 +5,13 @@ float get_distance_cm(void);
 
 uint16_t get_swimmer_position(void);
 
+uint16_t get_shore_position(void);
+
 void capture_image_start(void);
 
 void process_image_start(void);
 
 void wait_im_ready(void);
-
-uint16_t swimmer_in_danger(uint8_t *buffer);
 
 uint32_t smoothing(uint8_t *buffer, int k, int n);
 
@@ -29,8 +29,11 @@ uint16_t get_swimmer_width(void);
 
 //int check_sea_or_beach(uint16_t position, uint16_t size, uint8_t *buffer_b, uint8_t *buffer_g);
 
-_Bool check_if_shore(uint8_t *buffer_blue, uint8_t *buffer_green);
+//_Bool check_if_shore(uint8_t *buffer_blue, uint8_t *buffer_green);
 
+int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red);
+
+int get_left_shore(void);
 
 
 #endif /* PROCESS_IMAGE_H */

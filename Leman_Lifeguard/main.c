@@ -95,25 +95,29 @@ int main(void)
     search_swimmer_start();
     go_to_swimmer_start();
 
+    //switch_to_search_swimmer();
+
     // Main loop for finite state machine management
 
-    while(!all_swimmers_saved)
-    {
+   while(!all_swimmers_saved)
+   {
 		switch(state) {
 
 			case 0: // Search for swimmer to save
 
+				//clear_ready_to_save();
+
 				clear_leds();
-				set_body_led(0);
+				//set_body_led(0);
 				set_front_led(0);
 
 				switch_to_search_swimmer(); // problem : can't display image anymore
 
-				if(get_lake_scanned()){ //if ok car dans boucle while et que state ne change que en fonction de get empty lake => reste bien toujours dans la thread
-
+				if(get_lake_scanned()){
+					//if ok car dans boucle while et que state ne change que en fonction de get empty lake => reste bien toujours dans la thread
+					set_body_led(1);
 					if(get_empty_lake()){	//if not swimmer found go to victory
 						state = 3;
-						set_body_led(1);
 					}
 
 					if(!get_empty_lake()){	//if swimmer found go to swimmer
@@ -135,19 +139,38 @@ int main(void)
 				break;
 
 			case 2: //Save swimmer
-				/*clear_leds();
+				init_before_switch();
+
+				turn_left(HALF_TURN_COUNT, 10);
+				go_straight(2000);
+				turn_right(HALF_TURN_COUNT, 10);
+				//clear_ready_to_save();
+
+				clear_ready_to_save();
+
+
+				state = 3;
+
+
+				clear_leds();
 				//set_rgb_led(LED4, 1, 0, 0);
 				// retour case 0
-				state = 0;*/
+				state = 0;
 				break;
 
-			case 3: //victory
-				/*clear_leds();
+			case 3:
+				right_motor_set_speed(0);
+				left_motor_set_speed(0);
+
+				//playMelody(MARIO_FLAG, ML_SIMPLE_PLAY, NULL);
+
+				//victory
+				clear_leds();
 				set_body_led(1);
 
 				//victory_start(); //vérifier qu'elle ne joue qu'une fois
 				init_before_switch(); // empecher le code de retourner dans un mode du switch
-				all_swimmers_saved = 1;*/
+				all_swimmers_saved = 1;
 				break;
 		}
     }
@@ -155,6 +178,9 @@ int main(void)
     set_front_led(0);
     set_body_led(0);
 	//Here : bring swimmers back on beach
+
+
+
 
 
     /* Spoon test */
