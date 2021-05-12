@@ -90,7 +90,7 @@ int main(void)
     // Make sure no random thread will start to execute
     init_before_switch();
 
-    // Initialisation of threads
+    // Initialisation of threads for finite state machine
     capture_image_start();
     process_image_start();
     search_swimmer_start();
@@ -115,7 +115,6 @@ int main(void)
 				switch_to_search_swimmer(); // problem : can't display image anymore
 
 				if(get_lake_scanned()){
-					//if ok car dans boucle while et que state ne change que en fonction de get empty lake => reste bien toujours dans la thread
 					//set_body_led(1);
 					if(get_empty_lake()){	//if not swimmer found go to victory
 						state = 3;
@@ -143,7 +142,7 @@ int main(void)
 				init_before_switch();
 
 				turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
-				go_straight(3000);
+				go_straight(3000); // à modifier avec IR
 				turn_right(HALF_TURN_COUNT/2, 10);
 
 				clear_ready_to_save();//????
@@ -157,6 +156,7 @@ int main(void)
 
 			case 3://certaines thread doivent continuer de fonctionner
 				init_before_switch();
+
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
 

@@ -31,6 +31,8 @@ uint16_t get_swimmer_width(void);
 
 //_Bool check_if_shore(uint8_t *buffer_blue, uint8_t *buffer_green);
 
+void clear_shore(void);
+
 int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green);
 
 int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green);

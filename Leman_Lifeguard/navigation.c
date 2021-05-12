@@ -1,10 +1,8 @@
 #include "ch.h"
-#include "hal.h"
-#include <math.h>
-#include <usbcfg.h>
 #include <chprintf.h>
 #include <chthreads.h>
 #include <sensors/proximity.h>
+#include <math.h>
 
 #include <main.h>
 #include <motors.h>
@@ -23,8 +21,6 @@ static int step_to_turn = 0;
 static int mode = 5; //initialized with a value that is not in the switch (main.c) in order not to start a random thread
 
 //simple PI regulator implementation
-// A la fin, supprimer paramètres de l'intégrateur, entraîne des comportements étranges
-
 int16_t crawl_to_swimmer(float distance, float goal){
 
 	volatile float err = 0;
@@ -85,7 +81,6 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 				}
 
 				wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
-				set_front_led(0);
 
 				volatile int16_t tmp = get_swimmer_position();
 
@@ -93,20 +88,18 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 
 				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
 
-
-
 				//if the line is nearly in front of the camera, don't rotate
 
 				if(abs(speed_correction) < ROTATION_THRESHOLD){
 					speed_correction = 0;
 				}
+
 				//applies the speed from the PI regulator and the correction for the rotation
 
 				right_motor_set_speed(speed - ROT_KP * speed_correction);
 				left_motor_set_speed(speed + ROT_KP * speed_correction);
 
-				// Test for IR implementation :
-				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5))){ // à modifier
+				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5))){ // constantes à ajuster
 					while (get_prox(0) < 150){
 						right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
 						left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
@@ -138,63 +131,83 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     int swimmer_found = 0;
     int initial_count = left_motor_get_pos();
 
-    int16_t speed_correction = 1;
-
     lake_scanned = 0;
 
     while(1){
     	time = chVTGetSystemTime();
     	if((mode==0) && (!lake_scanned))
     	{
-    		wait_im_ready();
+    		wait_im_ready(); // utile ici ?
 
     		search_left_shore();
 
-    		while((!get_left_shore()) && (abs(get_left_shore_position() - IMAGE_BUFFER_SIZE/2))>20){
+    		// Turns left until finds left shore
 
+    		// Est-ce qu'on veut vraiment centrer l'image ? plus simple de ne pas le faire pour ne pas foir les images sur l plage à gauche non ?
+    		//while((!get_left_shore()) && (abs(get_left_shore_position() - IMAGE_BUFFER_SIZE/2))>20){ // previous
 
-    			right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
-    			left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
-
+    		while (!get_left_shore()){
+    			right_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
+    			left_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
     		}
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
+
+    		wait_im_ready(); // semble nécessaire ici
+
 			step_to_turn = 0;
-			wait_im_ready();
-			//speed_correction =1;
 			initial_count = left_motor_get_pos();
+
 			search_right_shore();
 
+			//Turns right until finds a swimmer or the right shore
+			// peut etre faire un while dans un while ? ou un while avec un if get right shore pour vérifier que bien plus grand que la balle
 			while((!swimmer_found) && (!get_right_shore()))
 			{
-				//wait_im_ready();
-				right_motor_set_speed(-MOTOR_SPEED_LIMIT/5);
-				left_motor_set_speed(+MOTOR_SPEED_LIMIT/5);
-				turn_count = (left_motor_get_pos() - initial_count);
+				//wait_im_ready(); //rien changé
+				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
+				left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+				//turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
-				set_led(LED3, 1);
-				/*if(swimmer_found)
-				{
-					set_led(LED6, 1);
-				}
-				if(get_right_shore())
-				{
-					set_front_led(1);
-				}*/
-				set_body_led(1);
 			}
+
+			//Fonctionne correctement mais lance tout de suite le PID au lieu de d'abord s' aligner avce la balle => traj art de cercle
+
+			clear_leds();
 
 			clear_shore();
 
-			set_front_led(0);
-			set_led(LED3, 0);
-			right_motor_set_speed(0);
+			//set_front_led(0);
+			//set_led(LED3, 0);
+
+			right_motor_set_speed(0); // à cmmenter ?
 			left_motor_set_speed(0);
 
+			wait_im_ready();
+
 			if (swimmer_found){
-				//set_body_led(1);
-				set_led(LED5, 1);
+
+				wait_im_ready();
+
+				//set_led(LED5, 1);
+
+				// avec cette condition, ne s'arrete jamais et ne va pas vers la balle ou alors fait des choses étranges:
+
+				while(abs(get_swimmer_position() - IMAGE_BUFFER_SIZE/2)>20){
+					set_led(LED3, 1);
+					wait_im_ready();
+
+					right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
+					left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
+					turn_count = (left_motor_get_pos() - initial_count);
+				}
+
+				right_motor_set_speed(0);
+				left_motor_set_speed(0);
+
+				clear_leds();
+
 				empty_lake = 0;
 				step_to_turn = (HALF_TURN_COUNT/2) - turn_count;
 				set_body_led(0);
@@ -208,6 +221,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			}
 
+			clear_leds();
 			lake_scanned = 1;
 
     	}

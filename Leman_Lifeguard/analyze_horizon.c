@@ -2,6 +2,7 @@
 #include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
+#include <math.h>
 
 #include <main.h>
 #include <camera/po8030.h>
@@ -72,14 +73,12 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint8_t im_diff_blue[IMAGE_BUFFER_SIZE] = {0};
 
-
 	int8_t tmp = 0;
 	uint16_t SwimmerWidth = 0; // 6, why not zero by default ???????
 
 	_Bool send_to_computer = true;
 
 	while(1){
-		//set_body_led(1);
 		//waits until an image has been captured
 		chBSemWait(&image_ready_sem);
 		//gets the pointer to the array filled with the last image in RGB565
@@ -97,6 +96,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 			img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
 			imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
 
+			// Creation of the buffer to recognise swimmers
 			tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
 			if (tmp <4){
 				tmp = 0;
@@ -106,6 +106,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		//Smoothing the signal to reduce noise with moving average
 		int n = 10;
+
 		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
 		{
 			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
@@ -114,42 +115,28 @@ static THD_FUNCTION(ProcessImage, arg) {
 									+ im_diff_red[k+7] + im_diff_red[k+8]
 									+ im_diff_red[k+9])/10;
 
-				//sert à rien vu que l'on le rechange juste après
-			/*+ im_diff[k+10]
-									+ im_diff[k+11]+ im_diff[k+12]
-									+ im_diff[k+13]+ im_diff[k+14]
-									+ im_diff[k+15]+ im_diff[k+16]
-									+ im_diff[k+17]+ im_diff[k+18]
-									+ im_diff[k+19]+ im_diff[k+20]
-									+ im_diff[k+21]+ im_diff[k+22]
-									+ im_diff[k+23]+ im_diff[k+24]
-									+ im_diff[k+25]+ im_diff[k+26]
-									+ im_diff[k+27]+ im_diff[k+28]
-									+ im_diff[k+29])10);//moving_average (im_diff, k, n);*/
-
-			im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
+			//im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
 		}
 
 		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
 		{
-					im_diff_red_smooth[k] = im_diff_red[k];
+					im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
 		}
 
 		//search for a swimmer in the image and gets its width in pixels
-		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+		if(shore_to_search != 1){
+			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+		}
 
-		if(shore_to_search == 1)
-		{
+		if(shore_to_search == 1){
 			left_shore = extract_shore(imb, img);
 		}
-		if(shore_to_search == 2)
-		{
+		if(shore_to_search == 2){
 			right_shore = extract_right_shore(imb, img);
 		}
 
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
-			//set_led(LED3, 1);
 			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM à la taille des balles
 		}
 
@@ -500,11 +487,10 @@ void clear_shore(void)
 
 void search_left_shore(void)
 {
-	shore_to_search =1;
+	shore_to_search = 1;
 }
 
-void search_right_shore(void)
-{
-	shore_to_search =2;
+void search_right_shore(void){
+	shore_to_search = 2;
 }
 
