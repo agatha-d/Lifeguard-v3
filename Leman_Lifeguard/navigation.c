@@ -155,11 +155,11 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     while(1){
     	time = chVTGetSystemTime();
-    	if((mode==0) && !lake_scanned)// &&facing_shore
+    	if((mode==0) && (!lake_scanned))
     	{
     		wait_im_ready();
 
-    		while(!get_left_shore()){//la shore ne va pas être centrée pour le moment
+    		while(!get_left_shore()){
 
     			right_motor_set_speed(-MOTOR_SPEED_LIMIT/20);
     			left_motor_set_speed(+MOTOR_SPEED_LIMIT/20);
@@ -168,7 +168,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     		if(get_left_shore())
     		{
-    			set_led(LED3, 1);
+    			//set_led(LED3, 1);
     			//wait_im_ready();
     			right_motor_set_speed(0);
     			left_motor_set_speed(0);
@@ -176,12 +176,11 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     			while(speed_correction)
     			{
-    				set_led(LED5, 1);
     				volatile int16_t tmp = get_left_shore_position();
 
     				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
     						//if the line is nearly in front of the camera, don't rotate
-    				if(abs(speed_correction) < 2*ROTATION_THRESHOLD){
+    				if(abs(speed_correction) < 25){//changer
     					speed_correction = 0;
     				}
 
@@ -190,60 +189,53 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     						//set_front_led(1);
 
     			}
-    			initial_count = left_motor_get_pos();
     			clear_leds();
-
     		}
+
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
 			step_to_turn = 0;
 			wait_im_ready();
+			speed_correction =1;
+			initial_count = left_motor_get_pos();
 
-			while((!swimmer_found) && (turn_count<=2*HALF_TURN_COUNT)){//while (!get_right_shore)
-				//remplacer par 1*half_turn_count
-				set_front_led(1);
-				wait_im_ready();
-				right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-				left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
+			while((!swimmer_found) && (!get_right_shore()))
+			{
+				//wait_im_ready();
+				right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
+				left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
-				set_led(LED6, 1);
-
+				set_led(LED3, 1);
+				/*if(swimmer_found)
+				{
+					set_led(LED6, 1);
+				}
 				if(get_right_shore())
 				{
-					set_led(LED3, 1);
-					    			//wait_im_ready();
-					  right_motor_set_speed(0);
-					    			left_motor_set_speed(0);
-					    			//wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
-
-
-				}
-
+					set_front_led(1);
+				}*/
 			}
 			set_front_led(0);
-
+			set_led(LED3, 0);
 			right_motor_set_speed(0);
 			left_motor_set_speed(0);
 
 			if (swimmer_found){
-				set_body_led(1);
+				//set_body_led(1);
+				set_led(LED5, 1);
 				empty_lake = 0;
 				step_to_turn = (HALF_TURN_COUNT/2) - turn_count;
 			}
 
 			if (!swimmer_found){
-				set_body_led(1);
+				set_led(LED7, 1);
 				empty_lake = 1;
 				step_to_turn = 0;
 			}
 
 			lake_scanned = 1;
 
-
-				//ici il y avait A)
-
-			//}
     	}
     	//100Hz
 		chThdSleepUntilWindowed(time, time + MS2ST(10));
@@ -354,35 +346,4 @@ void go_straight(float distance){
 	left_motor_set_speed(0);
 }
 
-//A)
-//A modifier pour implémentation avec la plage
-
-				/*_Bool facing_left_shore = 0;
-				_Bool facing_right_shore = 0;
-				_Bool set_target = 0;
-
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-
-				while(!facing_left_shore){//facing the lake = flanc montant vert/bleu
-
-					right_motor_set_speed(MOTOR_SPEED_LIMIT/6);
-					left_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-
-					facing_left_shore = check_left_shore(); // = flanc bleu/vert, fonction dans analyze_horizon, pas encore codée
-				}
-
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-
-				//Now the robot is facing the left side of the shore
-				//It starts scanning for swimmers by turning slowly to the right
-
-				while(!get_swimmer_position()){
-					right_motor_set_speed(-MOTOR_SPEED_LIMIT/6);
-					left_motor_set_speed(+MOTOR_SPEED_LIMIT/6);
-					if(check_right_shore()){
-						break;
-					}
-				}*/
 

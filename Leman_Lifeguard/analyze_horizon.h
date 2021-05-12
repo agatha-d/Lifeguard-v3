@@ -35,5 +35,7 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_r
 
 int get_left_shore(void);
 
+int get_right_shore(void);
+
 
 #endif /* PROCESS_IMAGE_H */

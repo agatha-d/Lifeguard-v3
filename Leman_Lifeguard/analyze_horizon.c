@@ -137,6 +137,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
 		left_shore = extract_shore(imb, img, im_diff_red_smooth);
+		right_shore = extract_right_shore(imb, img, im_diff_red_smooth);
 
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
@@ -488,7 +489,7 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 }
 
 
-//il faudra juste échanger les buffer_blue et green dans l'appel de fonction
+//à faire : changer pour qu'il faille juste échanger les buffer_blue et green dans l'appel de fonction
 int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
 	int8_t tmp = 0;
@@ -525,6 +526,7 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_r
 	return left_shore ;
 }
 
+//pour le moment deux fct différentes (temporaire)
 int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
 	int8_t tmp = 0;
@@ -536,7 +538,7 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *bu
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		tmp = buffer_blue[i]- buffer_green[i];
+		tmp = buffer_blue[i]- buffer_green[i];//qd petit = il y a du vert
 		if (tmp <1){
 			tmp = 0;
 		}
@@ -559,4 +561,10 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *bu
 		i++;
 	}
 	return right_shore ;
+}
+
+
+int get_right_shore(void)
+{
+	return right_shore;
 }
