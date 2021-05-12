@@ -21,7 +21,6 @@ static _Bool ready_to_save = 0;
 static int step_to_turn = 0;
 
 static int mode = 5; //initialized with a value that is not in the switch (main.c) in order not to start a random thread
-//c'est un bool pourtant??? pourquoi = à 5?
 
 //simple PI regulator implementation
 // A la fin, supprimer paramètres de l'intégrateur, entraîne des comportements étranges
@@ -72,11 +71,9 @@ static THD_FUNCTION(GoToSwimmer, arg) {
     volatile int16_t speed = 0;
     volatile int16_t speed_correction = 0;
 
-    static float sum_rot_error = 0;
-
 		while(1){
 			time = chVTGetSystemTime();
-			if((mode==1) && !ready_to_save){
+			if((mode==1) && (!ready_to_save)){
 
 				//computes the speed to give to the motors
 				//distance_cm is modified by the image processing thread
@@ -95,26 +92,18 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 				//computes a correction factor to let the robot rotate to be in front of the line
 
 				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
-/*
-				if(sum_rot_error > MAX_ROT_ERROR){
-					sum_rot_error = MAX_ROT_ERROR;
-					}else if(sum_rot_error < -MAX_ROT_ERROR){
-						sum_rot_error = -MAX_ROT_ERROR;
-					}*/
+
+
 
 				//if the line is nearly in front of the camera, don't rotate
 
 				if(abs(speed_correction) < ROTATION_THRESHOLD){
 					speed_correction = 0;
 				}
-
-				//sum_rot_error += speed_correction;//AAAAAAAAAAAH
-
 				//applies the speed from the PI regulator and the correction for the rotation
 
-				right_motor_set_speed(speed - ROT_KP * speed_correction - ROT_KI*sum_rot_error); // was right
-				left_motor_set_speed(speed + ROT_KP * speed_correction + ROT_KI*sum_rot_error); // was left
-				//set_front_led(1);
+				right_motor_set_speed(speed - ROT_KP * speed_correction);
+				left_motor_set_speed(speed + ROT_KP * speed_correction);
 
 				// Test for IR implementation :
 				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5))){ // à modifier
@@ -168,37 +157,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     			left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 
     		}
-
-
-
-    		   	/*
-    		if(get_left_shore())
-    		{
-    			//set_led(LED3, 1);
-    			//wait_im_ready();
-    			right_motor_set_speed(0);
-    			left_motor_set_speed(0);
-    			//wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
-
-    			while()
-
-    			while(speed_correction)
-    			{
-    				volatile int16_t tmp = get_left_shore_position();
-
-    				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
-    						//if the line is nearly in front of the camera, don't rotate
-    				if(abs(speed_correction) < 20){//changer
-    					speed_correction = 0;
-    				}
-
-    				right_motor_set_speed(-ROT_KP/5 * speed_correction); // was right
-    				left_motor_set_speed(ROT_KP/5 * speed_correction); // was left
-    						//set_front_led(1);
-
-    			}
-    			clear_leds();
-    		}*/
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);

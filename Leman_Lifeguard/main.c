@@ -142,9 +142,9 @@ int main(void)
 			case 2: //Save swimmer
 				init_before_switch();
 
-				turn_left(HALF_TURN_COUNT, 10);
-				go_straight(2000);
-				turn_right(HALF_TURN_COUNT, 10);
+				turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
+				go_straight(3000);
+				turn_right(HALF_TURN_COUNT/2, 10);
 
 				clear_ready_to_save();//????
 
@@ -155,7 +155,8 @@ int main(void)
 				state = 0;
 				break;
 
-			case 3:
+			case 3://certaines thread doivent continuer de fonctionner
+				init_before_switch();
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
 
@@ -166,13 +167,13 @@ int main(void)
 				//set_body_led(1);
 
 				//victory_start(); //vérifier qu'elle ne joue qu'une fois
-				init_before_switch(); // empecher le code de retourner dans un mode du switch
+				// empecher le code de retourner dans un mode du switch
 				all_swimmers_saved = 1;
 				break;
 		}
     }
     clear_leds();
-    set_front_led(1);
+    //set_front_led(1);
     set_body_led(0);
 	//Here : bring swimmers back on beach
 
