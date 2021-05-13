@@ -125,6 +125,10 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 
+	wait_im_ready();
+	search_left_shore();
+
+
     int turn_count = 0;
     int swimmer_found = 0;
     int initial_count = left_motor_get_pos();
@@ -137,28 +141,18 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     	{
     		wait_im_ready(); // utile ici ?
 
-    		search_left_shore();
-
+    		search_left_shore(); // semble avoir déjà gardé en mémoire une mauvaise valeur de
 
     		// Turns left until finds left shore
 
     		while (!get_left_shore()){
+    			wait_im_ready(); // utile ?
+    			swimmer_found = 0;
     			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/10);
     			left_motor_set_speed(- MOTOR_SPEED_LIMIT/10);
     		}
 
-
-    		//TEST POUR LE DEBUGGING : IL TROUVE DES LEFT SHORE TROP TOT
-    		if(get_left_shore())
-    		 {
-    		 set_body_led(1);
-    		 while(1)
-    		 	{
-    			 left_motor_set_speed(0);
-    			 right_motor_set_speed(0);
-    		 	}
-    		 	set_body_led(0);
-    		 }
+    		// pourquoi va si loin côté gauche ?
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
@@ -177,8 +171,10 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			// fonctionnait hier, maintenant semble faire systématiquement le même angle et sortir du while sans entrer dans le PID?!?!
 
 			while((!swimmer_found) && (!get_right_shore())){ // loop in the loop for the case where ball and right shore seen at the same time
-
-				//wait_im_ready(); // ne change rien
+			/*while(!swimmer_found){
+				wait_im_ready(); // utile ?
+				if(!get_right_shore()){ // ne semble pas voir le swimmer ni le right shore avec cette condition
+				//wait_im_ready(); // ne change rien*/
 
 				set_led(LED3, 1);
 
@@ -186,17 +182,29 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
+				//}
 			}
+
+
+
+			wait_im_ready(); // utile ?
+
+			// test to avoid case where swimmer and shore both in field of view
+/*
+			// globalement ok maintenant mais fonce vers le right shor quand le détecte... pense que c'est un swimmer ?
+			if(swimmer_found && get_right_shore()){
+				// ici ajouter condition sur position du swimmer par rapport à position du shore
+				clear_shore();
+				reset_shore();
+			}*/
 
 			right_motor_set_speed(0);
 			left_motor_set_speed(0);
 
-			wait_im_ready(); // utile ?
-
-			stop_searching_shore();
+			clear_shore();
 			clear_leds();
 
-			// WTF a décidé de fonctionner seulement parce que j'ai mis set front led dans le case 3
+			//Fait tout bien dans le bleu mais pas dans le vert
 
 
 			if (swimmer_found){
@@ -209,10 +217,10 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 					right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
 					left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 					turn_count = (left_motor_get_pos() - initial_count);
-				}
+				}*/
 
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);*/
+				right_motor_set_speed(0); // peut ere pas nécessaire, choisir avant ou après les if
+				left_motor_set_speed(0);
 
 				set_led(LED5, 1);
 
