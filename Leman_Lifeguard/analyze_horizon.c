@@ -21,10 +21,10 @@ static int right_shore = 0;
 
 static uint16_t width = 0;
 
-//uint16_t left_shore_position = 0;
-//uint16_t right_shore_position = 0;
+uint16_t left_shore_position = 0;
+uint16_t right_shore_position = 0;
 
-int what_to_search=0; //=1 pour le shore left et 2 pour le shore right
+int shore_to_search = 0; //= 1 pour le shore left et 2 pour le shore right // wtf tourne à droite toit de suite
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -40,7 +40,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 170 + 170 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 250, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 220, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -56,7 +56,7 @@ static THD_FUNCTION(CaptureImage, arg) {
 }
 
 
-static THD_WORKING_AREA(waProcessImage, 4096);
+static THD_WORKING_AREA(waProcessImage, 8192); //4096 suffisant pour sans le im diff blue
 static THD_FUNCTION(ProcessImage, arg) {
 
 	chRegSetThreadName(__FUNCTION__);
@@ -71,9 +71,10 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // 2*red - blue - green
 	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
 
-	//uint8_t im_diff_blue[IMAGE_BUFFER_SIZE] = {0};
+	uint8_t im_diff_blue[IMAGE_BUFFER_SIZE] = {0};
 
 	int8_t tmp = 0;
+	int8_t tmp_g = 0;
 	uint16_t SwimmerWidth = 0; // 6, why not zero by default ???????
 
 	_Bool send_to_computer = true;
@@ -98,7 +99,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 			// Creation of the buffer to recognise swimmers
 			tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
-			if (tmp <4){
+			if (tmp <10){
 				tmp = 0;
 			}
 			im_diff_red[i/2] = tmp;
@@ -120,41 +121,46 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
 		{
-					im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
+			im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
 		}
 
 		//search for a swimmer in the image and gets its width in pixels
-		if((what_to_search == 0) || (what_to_search == 2)){
+		//if((shore_to_search == 0) || (shore_to_search == 2)){
 			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+		//} else {
+			//SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
+		//}
+
+		if(shore_to_search == 1){
+			left_shore =  extract_left_shore(imb, img, imr);
 		} else {
-			SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
+			left_shore = 0;
 		}
 
-		if(what_to_search){
-			extract_shore(imb, img);
+		if(shore_to_search == 2){
+			right_shore = extract_right_shore(imb, img, imr);
+		} else {
+			right_shore = 0;
 		}
 
-		/*if(what_to_search == 2){
-			right_shore = extract_shore(imb, img);
-		}*/
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
 			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM à la taille des balles
 		}
 
-		/*for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+		for(uint16_t i = 0 ; i < IMAGE_BUFFER_SIZE ; i+=1){
 
-				tmp = img[i/2]- imb[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
-				if (tmp <1){
-					tmp = 0;
+				tmp_g = 2*img[i]- imb[i] - imr[i]; // Substract blue and green values in order to cancel red in other areas than swimmer
+				if (tmp_g <15){
+					tmp_g = 0;
 				}
-				im_diff_blue[i/2] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
-		}*/
+				im_diff_blue[i] = tmp_g;//= a un nb >4 quand dans le vert, à 0 dans le bleu
+		}
 
 		if(send_to_computer){
 
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+			SendUint8ToComputer(im_diff_blue, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
 		}
 		//invert the bool : only shows 1 image out of 2
 		send_to_computer = !send_to_computer;
@@ -290,10 +296,10 @@ uint16_t get_swimmer_width(void){
 	//set_front_led(1);
 	return width;
 }
-/*
+
 uint16_t get_left_shore_position(void){
 	return left_shore_position;
-}*/
+}
 
 int get_left_shore(void){
 	return left_shore;
@@ -402,39 +408,26 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 
 
 //à faire : changer pour qu'il faille juste échanger les buffer_blue et green dans l'appel de fonction
-int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
+int extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
 	int8_t tmp = 0;
 	int stop = 0;
 	uint16_t i = 0;
-
-	right_shore = 0;
-	left_shore = 0;
-
-	int shore =0;
 
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
 
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		if(what_to_search == 1)
-		{
-			tmp = buffer_green[i]- buffer_blue[i];
-			//left_shore = 1;
-		}
-
-		if(what_to_search == 2)
-		{
-			tmp = buffer_blue[i]- buffer_green[i];
-					//right_shore = 1;
-		}
-
-		if (tmp <3){
+		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
+		if (tmp <15){
 			tmp = 0;
 		}
-		im_diff[i] = tmp;
+		im_diff[i] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
 	}
+
+	left_shore = 0;
+	stop = 0;
 
 	i = 10;
 
@@ -442,32 +435,17 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 	{
 		if((im_diff[i]==0)&& (im_diff[i-10]>0))
 		{
-			//set_body_led(1);
-			if(what_to_search == 1)
-			{
-				//set_front_led(1);
-				left_shore = 1;
-				shore = left_shore;
-				right_shore = 0;
-			}
-			if(what_to_search == 2)
-			{
-				set_body_led(1);
-				right_shore = 1;
-				shore = right_shore;
-				left_shore = 0;
-			}
 			stop = 1;
-			//shore_position = i;
+			left_shore = 1;
+			left_shore_position = i;
 		}
 		i++;
 	}
-	return shore ;
+	return left_shore ;
 }
 
-/*
 //pour le moment deux fct différentes (temporaire)
-int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
+int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
 	int8_t tmp = 0;
 	int stop = 0;
@@ -478,8 +456,8 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		tmp = buffer_blue[i]- buffer_green[i];//qd petit = il y a du vert
-		if (tmp <1){
+		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];//qd petit = il y a du vert
+		if (tmp <15){
 			tmp = 0;
 		}
 		im_diff[i] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
@@ -492,7 +470,7 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 
 	while((i < IMAGE_BUFFER_SIZE)&&(!stop))
 	{
-		if((im_diff[i]==0)&& (im_diff[i-10]>0))
+		if((im_diff[i]>0)&& (im_diff[i-10]==0))
 		{
 			stop = 1;
 			right_shore = 1;
@@ -501,7 +479,7 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 		i++;
 	}
 	return right_shore ;
-}*/
+}
 
 
 int get_right_shore(void)
@@ -509,18 +487,24 @@ int get_right_shore(void)
 	return right_shore;
 }
 
-
-void stop_searching_shore(void)
+void reset_shore(void)
 {
-	what_to_search = 0;
+	right_shore = 0;
+	left_shore = 0;
+}
+
+
+void clear_shore(void)
+{
+	shore_to_search = 0;
 }
 
 void search_left_shore(void)
 {
-	what_to_search = 1;
+	shore_to_search = 1;
 }
 
 void search_right_shore(void){
-	what_to_search = 2;
+	shore_to_search = 2;
 }
 

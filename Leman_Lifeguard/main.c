@@ -100,6 +100,8 @@ int main(void)
 
     // Main loop for finite state machine management
 
+
+
    while(!all_swimmers_saved)
    {
 		switch(state) {
@@ -108,7 +110,7 @@ int main(void)
 
 				//clear_ready_to_save();
 
-				//clear_leds();
+				clear_leds();
 				//set_body_led(0);
 				set_front_led(0);
 
@@ -157,7 +159,7 @@ int main(void)
 			case 3://certaines thread doivent continuer de fonctionner
 				init_before_switch();
 
-				//set_front_led(1);
+				set_front_led(1);
 
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
@@ -178,7 +180,6 @@ int main(void)
     //set_front_led(1);
     set_body_led(0);
 	//Here : bring swimmers back on beach
-
 
 
 
