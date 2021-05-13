@@ -124,15 +124,22 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//search for a swimmer in the image and gets its width in pixels
-		if(shore_to_search != 1){
+		if((shore_to_search == 0) || (shore_to_search == 2)){
 			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+		} else {
+			SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
 		}
 
 		if(shore_to_search == 1){
 			left_shore = extract_shore(imb, img);
+		} else {
+			left_shore = 0;
 		}
+
 		if(shore_to_search == 2){
 			right_shore = extract_right_shore(imb, img);
+		} else {
+			right_shore = 0;
 		}
 
 		//converts the width into a distance between the robot and the camera
