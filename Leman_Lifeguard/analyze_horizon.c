@@ -448,11 +448,14 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 				//set_front_led(1);
 				left_shore = 1;
 				shore = left_shore;
+				right_shore = 0;
 			}
 			if(what_to_search == 2)
 			{
+				set_body_led(1);
 				right_shore = 1;
 				shore = right_shore;
+				left_shore = 0;
 			}
 			stop = 1;
 			//shore_position = i;

@@ -203,7 +203,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 				if(get_right_shore())
 				{
-					set_body_led(1);
+					//set_body_led(1);
 					while(1)
 					{
 						left_motor_set_speed(0);
