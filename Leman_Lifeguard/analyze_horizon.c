@@ -130,13 +130,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 			SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
 		}
 
-		if(what_to_search == 1){
-			left_shore = extract_shore(imb, img);
+		if(what_to_search){
+			extract_shore(imb, img);
 		}
 
-		if(what_to_search == 2){
+		/*if(what_to_search == 2){
 			right_shore = extract_shore(imb, img);
-		}
+		}*/
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
 			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM à la taille des balles
@@ -411,7 +411,7 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 	right_shore = 0;
 	left_shore = 0;
 
-	int shore;
+	int shore =0;
 
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
 
@@ -426,11 +426,11 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 
 		if(what_to_search == 2)
 		{
-					tmp = buffer_blue[i]- buffer_green[i];
+			tmp = buffer_blue[i]- buffer_green[i];
 					//right_shore = 1;
 		}
 
-		if (tmp <1){
+		if (tmp <3){
 			tmp = 0;
 		}
 		im_diff[i] = tmp;
@@ -442,8 +442,10 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 	{
 		if((im_diff[i]==0)&& (im_diff[i-10]>0))
 		{
+			//set_body_led(1);
 			if(what_to_search == 1)
 			{
+				//set_front_led(1);
 				left_shore = 1;
 				shore = left_shore;
 			}

@@ -149,21 +149,23 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 
     		//TEST POUR LE DEBUGGING : IL TROUVE DES LEFT SHORE TROP TOT
-    		if(get_left_shore())
+    		wait_im_ready();
+
+    		/*if(get_left_shore())
     		 {
-    		 set_body_led(1);
+    		// set_body_led(1);
     		 while(1)
     		 	{
     			 left_motor_set_speed(0);
     			 right_motor_set_speed(0);
     		 	}
-    		 	set_body_led(0);
-    		 }
+    		 	//set_body_led(0);
+    		 }*/
+
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
-
-    		wait_im_ready(); // IMPORTANT ICI (avant le search right shore)
+    		// IMPORTANT ICI (avant le search right shore)
 
 			step_to_turn = 0;
 			initial_count = left_motor_get_pos();
@@ -176,9 +178,21 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			// fonctionnait hier, maintenant semble faire systématiquement le même angle et sortir du while sans entrer dans le PID?!?!
 
-			while((!swimmer_found) && (!get_right_shore())){ // loop in the loop for the case where ball and right shore seen at the same time
+			//while((!swimmer_found) && (!get_right_shore())){ // NE MARCHE PAS
+				//loop in the loop for the case where ball and right shore seen at the same time
+			while(!get_right_shore())
+			{
+				if(swimmer_found)
+				{
+					set_front_led(1);
+					break;
+				}
 
 				//wait_im_ready(); // ne change rien
+
+				//set_body_led(1);
+				//set_front_led(1);
+
 
 				set_led(LED3, 1);
 
@@ -186,6 +200,17 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
+
+				if(get_right_shore())
+				{
+					set_body_led(1);
+					while(1)
+					{
+						left_motor_set_speed(0);
+						right_motor_set_speed(0);
+					}
+					set_body_led(0);
+				}
 			}
 
 			right_motor_set_speed(0);
