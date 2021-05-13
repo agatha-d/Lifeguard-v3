@@ -21,10 +21,10 @@ static int right_shore = 0;
 
 static uint16_t width = 0;
 
-uint16_t left_shore_position = 0;
-uint16_t right_shore_position = 0;
+//uint16_t left_shore_position = 0;
+//uint16_t right_shore_position = 0;
 
-int shore_to_search=0; //=1 pour le shore left et 2 pour le shore right
+int what_to_search=0; //=1 pour le shore left et 2 pour le shore right
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -71,7 +71,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // 2*red - blue - green
 	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
 
-	uint8_t im_diff_blue[IMAGE_BUFFER_SIZE] = {0};
+	//uint8_t im_diff_blue[IMAGE_BUFFER_SIZE] = {0};
 
 	int8_t tmp = 0;
 	uint16_t SwimmerWidth = 0; // 6, why not zero by default ???????
@@ -124,37 +124,32 @@ static THD_FUNCTION(ProcessImage, arg) {
 		}
 
 		//search for a swimmer in the image and gets its width in pixels
-		if((shore_to_search == 0) || (shore_to_search == 2)){
+		if((what_to_search == 0) || (what_to_search == 2)){
 			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 		} else {
 			SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
 		}
 
-		if(shore_to_search == 1){
+		if(what_to_search == 1){
 			left_shore = extract_shore(imb, img);
-		} else {
-			left_shore = 0;
 		}
 
-		if(shore_to_search == 2){
-			right_shore = extract_right_shore(imb, img);
-		} else {
-			right_shore = 0;
+		if(what_to_search == 2){
+			right_shore = extract_shore(imb, img);
 		}
-
 		//converts the width into a distance between the robot and the camera
 		if(SwimmerWidth){
 			distance_cm = PXTOCM/SwimmerWidth; // modifier PXTOCM à la taille des balles
 		}
 
-		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+		/*for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
 
 				tmp = img[i/2]- imb[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
 				if (tmp <1){
 					tmp = 0;
 				}
 				im_diff_blue[i/2] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
-		}
+		}*/
 
 		if(send_to_computer){
 
@@ -295,10 +290,10 @@ uint16_t get_swimmer_width(void){
 	//set_front_led(1);
 	return width;
 }
-
+/*
 uint16_t get_left_shore_position(void){
 	return left_shore_position;
-}
+}*/
 
 int get_left_shore(void){
 	return left_shore;
@@ -413,20 +408,33 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 	int stop = 0;
 	uint16_t i = 0;
 
+	right_shore = 0;
+	left_shore = 0;
+
+	int shore;
+
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
 
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		tmp = buffer_green[i]- buffer_blue[i];
+		if(what_to_search == 1)
+		{
+			tmp = buffer_green[i]- buffer_blue[i];
+			//left_shore = 1;
+		}
+
+		if(what_to_search == 2)
+		{
+					tmp = buffer_blue[i]- buffer_green[i];
+					//right_shore = 1;
+		}
+
 		if (tmp <1){
 			tmp = 0;
 		}
-		im_diff[i] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
+		im_diff[i] = tmp;
 	}
-
-	left_shore = 0;
-	stop = 0;
 
 	i = 10;
 
@@ -434,15 +442,25 @@ int extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 	{
 		if((im_diff[i]==0)&& (im_diff[i-10]>0))
 		{
+			if(what_to_search == 1)
+			{
+				left_shore = 1;
+				shore = left_shore;
+			}
+			if(what_to_search == 2)
+			{
+				right_shore = 1;
+				shore = right_shore;
+			}
 			stop = 1;
-			left_shore = 1;
-			left_shore_position = i;
+			//shore_position = i;
 		}
 		i++;
 	}
-	return left_shore ;
+	return shore ;
 }
 
+/*
 //pour le moment deux fct différentes (temporaire)
 int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 
@@ -478,7 +496,7 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green){
 		i++;
 	}
 	return right_shore ;
-}
+}*/
 
 
 int get_right_shore(void)
@@ -487,17 +505,17 @@ int get_right_shore(void)
 }
 
 
-void clear_shore(void)
+void stop_searching_shore(void)
 {
-	shore_to_search = 0;
+	what_to_search = 0;
 }
 
 void search_left_shore(void)
 {
-	shore_to_search = 1;
+	what_to_search = 1;
 }
 
 void search_right_shore(void){
-	shore_to_search = 2;
+	what_to_search = 2;
 }
 

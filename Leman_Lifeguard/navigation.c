@@ -139,12 +139,26 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
     		search_left_shore();
 
+
     		// Turns left until finds left shore
 
     		while (!get_left_shore()){
     			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/10);
     			left_motor_set_speed(- MOTOR_SPEED_LIMIT/10);
     		}
+
+
+    		//TEST POUR LE DEBUGGING : IL TROUVE DES LEFT SHORE TROP TOT
+    		if(get_left_shore())
+    		 {
+    		 set_body_led(1);
+    		 while(1)
+    		 	{
+    			 left_motor_set_speed(0);
+    			 right_motor_set_speed(0);
+    		 	}
+    		 	set_body_led(0);
+    		 }
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
@@ -179,7 +193,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			wait_im_ready(); // utile ?
 
-			clear_shore();
+			stop_searching_shore();
 			clear_leds();
 
 			// WTF a décidé de fonctionner seulement parce que j'ai mis set front led dans le case 3
