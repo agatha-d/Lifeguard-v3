@@ -157,7 +157,7 @@ int main(void)
 			case 3://certaines thread doivent continuer de fonctionner
 				init_before_switch();
 
-				//set_front_led(1);
+				set_front_led(1);
 
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
