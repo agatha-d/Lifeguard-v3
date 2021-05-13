@@ -108,7 +108,7 @@ int main(void)
 
 				//clear_ready_to_save();
 
-				clear_leds();
+				//clear_leds();
 				//set_body_led(0);
 				set_front_led(0);
 
