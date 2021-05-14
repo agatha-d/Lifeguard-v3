@@ -60,21 +60,22 @@ int main(void)
     chSysInit();
     mpu_init();
 
-    /** Inits the Inter Process Communication bus. */
+    // Init the Inter Process Communication bus.
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
     // Initialisation of peripherals
     serial_start();
     usb_start();
-    dcmi_start(); //starts the camera
 
-   po8030_start();
-    po8030_set_ae(0); //test disable auto exposure 0=disable, 1 = able
-    po8030_set_awb(0); // test disable auto white balance0=disable, 1 = able
-    po8030_set_rgb_gain(0x20, 0x20, 0x20); // test same gain =1 for every color
+    dcmi_start(); //starts the camera
+    po8030_start();
+    po8030_set_ae(0); // disable auto exposure
+    po8030_set_awb(0); // disable auto white balance
+    po8030_set_rgb_gain(0x20, 0x20, 0x20); // same gain for every color
 
     dac_start();
     playMelodyStart();
+
     proximity_start(); //init the IR sensors
     calibrate_ir();
     motors_init();
@@ -96,8 +97,6 @@ int main(void)
     search_swimmer_start();
     go_to_swimmer_start();
 
-    //switch_to_search_swimmer();
-
     // Main loop for finite state machine management
 
    while(!all_swimmers_saved)
@@ -110,7 +109,7 @@ int main(void)
 				set_body_led(1);
 				set_front_led(0);
 
-				switch_to_search_swimmer(); // problem : can't display image anymore
+				switch_to_search_swimmer();
 
 				if(get_lake_scanned()){
 
@@ -125,8 +124,6 @@ int main(void)
 				clear_ready_to_save();
 				break;
 
-
-
 			case 1: // Go to swimmer
 
 				set_body_led(0);
@@ -139,7 +136,10 @@ int main(void)
 				break;
 
 			case 2: //Save swimmer: brings swimmer back to beach
+
 				init_before_switch(); // pause all threads
+
+				// à faire dans une fonction
 
 				turn_left(HALF_TURN_COUNT, 4);
 
@@ -160,7 +160,8 @@ int main(void)
 
 				break;
 
-			case 3://certaines thread doivent continuer de fonctionner
+			case 3:// Victory: no more swimmers in the lake
+
 				init_before_switch();
 
 				set_front_led(1);
@@ -169,14 +170,10 @@ int main(void)
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
 
-				//playMelody(MARIO_FLAG, ML_SIMPLE_PLAY, NULL);
+				playMelody(MARIO_FLAG, ML_SIMPLE_PLAY, NULL);
 
-				//victory
 				clear_leds();
-				//set_body_led(1);
 
-				//victory_start(); //vérifier qu'elle ne joue qu'une fois
-				// empecher le code de retourner dans un mode du switch
 				all_swimmers_saved = 1;
 				break;
 		}

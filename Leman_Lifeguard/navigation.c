@@ -47,9 +47,6 @@ int16_t crawl_to_swimmer(float distance, float goal){
 	}
 
 	speed = KP * err + KI * sum_error;
-	if(speed){
-	} else {
-	}
 
     return (int16_t)speed;
 }
@@ -86,7 +83,7 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 				//computes a correction factor to let the robot rotate to be in front of the line
 				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
 
-				//if the line is nearly in front of the camera, don't rotate
+				//if the swimmer is nearly in front of the camera, don't rotate
 				if(abs(speed_correction) < ROTATION_THRESHOLD){
 					speed_correction = 0;
 				}
@@ -96,7 +93,9 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 				right_motor_set_speed(speed - ROT_KP * speed_correction);
 				left_motor_set_speed(speed + ROT_KP * speed_correction);
 
-				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5))) // constantes à ajuster
+				// when close enough and aligned, sprint with IR sensors
+
+				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5)))
 				{
 					while (get_prox(0) < 150){
 						right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
@@ -139,14 +138,14 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     	time = chVTGetSystemTime();
     	if((mode==0) && (!lake_scanned))
     	{
-    		wait_im_ready(); // utile ici ?
+    		wait_im_ready();
 
     		search_left_shore();
 
     		// Turns left until finds left shore
 
     		while (!get_left_shore()){
-    			wait_im_ready(); // utile ? semble aller un peu moins loin sur la plage avec
+    			wait_im_ready();
     			swimmer_found = 0;
     			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
     			left_motor_set_speed(- MOTOR_SPEED_LIMIT/12);
@@ -160,25 +159,22 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			step_to_turn = 0;
 			initial_count = left_motor_get_pos();
 
-			// essai autre endroit: semble mieux
-
 			if(swimmer_found && get_left_shore()){
 				if(get_swimmer_position() <= get_left_shore_position()){
 					swimmer_found = 0;
 				}
 			}
 
-			//wait_im_ready(); // IMPORTANT ICI (avant le search right shore)
-
 			search_right_shore();
 
-			// Turns right until finds a swimmer or the right shore
-			// Stops as soon as the shore line enters its field of view
-			// this way, swimmers already on the beach cannot be seen
+			/* Turns right until finds a swimmer or the right shore
+			 * Stops as soon as the shore line enters its field of view
+			 * this way, swimmers already on the beach cannot be seen
+			 */
 
 			while((!swimmer_found) && (!get_right_shore())){
 				set_led(LED3, 1);
-				wait_im_ready();// utile ?
+				wait_im_ready();
 				right_motor_set_speed(-MOTOR_SPEED_LIMIT/12);
 				left_motor_set_speed(+MOTOR_SPEED_LIMIT/12);
 				turn_count = (left_motor_get_pos() - initial_count);
@@ -261,18 +257,15 @@ int get_step_to_turn(){
 /* ================================================
  * Finite state machine management functions : chose code to execute */
 
-void switch_to_search_swimmer(void)
-{
+void switch_to_search_swimmer(void){
 	mode = 0;
 }
 
-void switch_to_go_to_swimmer(void)
-{
+void switch_to_go_to_swimmer(void){
 	mode = 1;
 }
 
-void init_before_switch(void)
-{
+void init_before_switch(void){
 	mode = 5; // assign a value out of switch to make sure not to come back to another case
 }
 
@@ -286,8 +279,7 @@ void turn_left(int turn_count, int div){
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 
-	while (abs(left_motor_get_pos() - initial_count) < turn_count)
-	{
+	while (abs(left_motor_get_pos() - initial_count) < turn_count){
 		right_motor_set_speed(+MOTOR_SPEED_LIMIT/div);
 		left_motor_set_speed(-MOTOR_SPEED_LIMIT/div);
 	}
@@ -302,8 +294,7 @@ void turn_right(int turn_count, int div){
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 
-	while (abs(left_motor_get_pos() - initial_count) < turn_count)
-	{
+	while (abs(left_motor_get_pos() - initial_count) < turn_count){
 		right_motor_set_speed(-MOTOR_SPEED_LIMIT/div);
 		left_motor_set_speed(+MOTOR_SPEED_LIMIT/div);
 	}
@@ -318,8 +309,7 @@ void go_straight(float distance){
 	right_motor_set_speed(0);
 	left_motor_set_speed(0);
 
-	while (abs(left_motor_get_pos() - initial_count) < distance) //distance donnée par capteur de distance
-	{
+	while (abs(left_motor_get_pos() - initial_count) < distance){
 		right_motor_set_speed(MOTOR_SPEED_LIMIT/4);
 		left_motor_set_speed(MOTOR_SPEED_LIMIT/4);
 	}

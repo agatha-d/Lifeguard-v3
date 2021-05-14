@@ -241,7 +241,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	return width; // width = 0 -> no swimmer
 }
 
-
+//	Return static variables
+/* =================================================*/
 
 float get_distance_cm(void){
 	return distance_cm;
@@ -252,7 +253,6 @@ uint16_t get_swimmer_position(void){
 }
 
 uint16_t get_swimmer_width(void){
-	//set_front_led(1);
 	return width;
 }
 
