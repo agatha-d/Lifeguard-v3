@@ -348,4 +348,8 @@ void go_straight(float distance){
 	left_motor_set_speed(0);
 }
 
+void clear_lake (void){
+	lake_scanned = 0;
+}
+
 

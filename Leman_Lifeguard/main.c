@@ -100,14 +100,8 @@ int main(void)
 
     // Main loop for finite state machine management
 
-
-
-
-
    while(!all_swimmers_saved)
    {
-
-
 		switch(state) {
 
 			case 0: // Search for swimmer to save
@@ -170,6 +164,10 @@ int main(void)
 			   }
 
 			   	turn_right(HALF_TURN_COUNT, 8);
+			   	go_straight(500);
+
+
+			   	clear_lake();
 
 
 				state = 0;

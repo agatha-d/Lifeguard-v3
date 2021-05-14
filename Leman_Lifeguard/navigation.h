@@ -43,6 +43,8 @@ void init_before_switch(void);
 void switch_to_search_swimmer(void);
 void switch_to_go_to_swimmer(void);
 
+void clear_lake (void);
+
 
 
 #endif /* PI_REGULATOR_H */
