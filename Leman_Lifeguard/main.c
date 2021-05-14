@@ -122,9 +122,10 @@ int main(void)
 						state = 1;
 					}
 				}
+				clear_ready_to_save();
 				break;
 
-				clear_ready_to_save();
+
 
 			case 1: // Go to swimmer
 
@@ -164,7 +165,7 @@ int main(void)
 			   }
 
 			   	turn_right(HALF_TURN_COUNT, 8);
-			   	go_straight(500);
+			   	go_straight(700);
 
 
 			   	clear_lake();

@@ -99,12 +99,15 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 			// Creation of the buffer to recognise swimmers
 			tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
-			if (tmp <4){
+			if (tmp <3){
 				tmp = 0;
+			}
+			if (tmp > 3){
+				tmp = 40;
 			}
 			im_diff_red[i/2] = tmp;
 		}
-
+/*
 		//Smoothing the signal to reduce noise with moving average
 		int n = 10;
 
@@ -122,11 +125,11 @@ static THD_FUNCTION(ProcessImage, arg) {
 		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
 		{
 			im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
-		}
+		}*/
 
 		//search for a swimmer in the image and gets its width in pixels
 		//if((shore_to_search == 0) || (shore_to_search == 2)){
-			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+			SwimmerWidth = extract_swimmer_width(im_diff_red);
 		//} else {
 			//SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
 		//}
@@ -160,7 +163,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		if(send_to_computer){
 
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+			SendUint8ToComputer(im_diff_red, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
 		}
 		//invert the bool : only shows 1 image out of 2
 		send_to_computer = !send_to_computer;
