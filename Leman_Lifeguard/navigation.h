@@ -8,7 +8,7 @@
 #define ROT_KP					0.5 //0.5
 #define ROT_KI					0.005f //if integral term only, not sure yet // previous value without condition on blue : other idea :  + rouge - bleu - vert
 #define MAX_ROT_ERROR			(MOTOR_SPEED_LIMIT/ROT_KI/200) // /100
-#define ERROR_THRESHOLD			0.2f	//[cm] because of the noise of the camera (au départ 0.1)
+#define ERROR_THRESHOLD			0.8f
 #define KP						17.0f // 15 : mais vise pas trop mal avec rot KP = 0.5, threshold = 10 mais avance un peu par accoups, et ne s'arrete pas
 #define KI 						0.001f	//must not be zero 0.0002f
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI) // trop grand ?

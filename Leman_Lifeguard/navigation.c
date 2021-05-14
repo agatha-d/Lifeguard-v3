@@ -46,7 +46,7 @@ int16_t crawl_to_swimmer(float distance, float goal){
 		sum_error = -MAX_SUM_ERROR;
 	}
 
-	speed = KP * err + KI * sum_error; // avec ou sans KI ?
+	speed = KP * err + KI * sum_error;
 	if(speed){
 	} else {
 	}
@@ -146,12 +146,11 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     		// Turns left until finds left shore
 
     		while (!get_left_shore()){
-    			wait_im_ready(); // utile ?
+    			wait_im_ready(); // utile ? semble aller un peu moins loin sur la plage avec
     			swimmer_found = 0;
-    			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/10);
-    			left_motor_set_speed(- MOTOR_SPEED_LIMIT/10);
+    			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
+    			left_motor_set_speed(- MOTOR_SPEED_LIMIT/12);
     		}
-
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
@@ -161,13 +160,17 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			step_to_turn = 0;
 			initial_count = left_motor_get_pos();
 
-			search_right_shore();
+			// essai autre endroit: semble mieux
 
 			if(swimmer_found && get_left_shore()){
-				if(get_swimmer_position() < get_left_shore_position()){
+				if(get_swimmer_position() <= get_left_shore_position()){
 					swimmer_found = 0;
 				}
 			}
+
+			//wait_im_ready(); // IMPORTANT ICI (avant le search right shore)
+
+			search_right_shore();
 
 			// Turns right until finds a swimmer or the right shore
 			// Stops as soon as the shore line enters its field of view
@@ -175,20 +178,17 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			while((!swimmer_found) && (!get_right_shore())){
 				set_led(LED3, 1);
-
-				right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
-				left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
+				wait_im_ready();// utile ?
+				right_motor_set_speed(-MOTOR_SPEED_LIMIT/12);
+				left_motor_set_speed(+MOTOR_SPEED_LIMIT/12);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
 			}
 
-
-			wait_im_ready(); // utile ?
-
-			// test to avoid case where swimmer and shore both in field of view
+			//wait_im_ready(); // utile ?
 
 			if(swimmer_found && get_right_shore()){
-				if(get_swimmer_position() > get_right_shore_position()){
+				if(get_swimmer_position() >= get_right_shore_position()){
 					swimmer_found = 0;
 				}
 			}
