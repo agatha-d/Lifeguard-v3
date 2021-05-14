@@ -185,8 +185,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				swimmer_found = get_swimmer_width();
 			}
 
-			//wait_im_ready(); // utile ?
-
 			if(swimmer_found && get_right_shore()){
 				if(get_swimmer_position() >= get_right_shore_position()){
 					swimmer_found = 0;
@@ -205,8 +203,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 				right_motor_set_speed(0); // peut ere pas nécessaire, choisir avant ou après les if
 				left_motor_set_speed(0);
 
-				set_led(LED5, 1);
-
 				empty_lake = 0;
 				step_to_turn = (HALF_TURN_COUNT/2) - turn_count;
 
@@ -221,7 +217,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			}
 
 			lake_scanned = 1;
-
     	}
     	//100Hz
 		chThdSleepUntilWindowed(time, time + MS2ST(10));

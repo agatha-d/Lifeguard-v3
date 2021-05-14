@@ -4,14 +4,12 @@
 /* Define PI controller coefficients for rotation
  * and going straight here in order to be easily tuned
  */
-#define ROTATION_THRESHOLD		10
-#define ROT_KP					0.5 //0.5
-#define ROT_KI					0.005f //if integral term only, not sure yet // previous value without condition on blue : other idea :  + rouge - bleu - vert
-#define MAX_ROT_ERROR			(MOTOR_SPEED_LIMIT/ROT_KI/200) // /100
-#define ERROR_THRESHOLD			1.0f
 #define KP						18.0f //17.0f // 15 : mais vise pas trop mal avec rot KP = 0.5, threshold = 10 mais avance un peu par accoups, et ne s'arrete pas
 #define KI 						0.002f	//must not be zero //0.001f
-#define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI) // trop grand ?
+#define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
+#define ROTATION_THRESHOLD		10
+#define ROT_KP					0.5 //0.5
+#define ERROR_THRESHOLD			1.0f
 
 #define HALF_TURN_COUNT			660 // For 180° turns
 

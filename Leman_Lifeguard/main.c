@@ -88,7 +88,7 @@ int main(void)
     uint8_t state = 0;
 
     // Make sure no random thread will start to execute
-    init_before_switch(); //A RERAJOUTER
+    init_before_switch();
 
     // Initialisation of threads for finite state machine
     capture_image_start();
@@ -131,10 +131,6 @@ int main(void)
 
 				set_body_led(0);
 
-				//clear_ready_to_save();
-
-				//clear_leds();
-
 				switch_to_go_to_swimmer();
 
 				if(get_ready_to_save()){
@@ -142,50 +138,25 @@ int main(void)
 				}
 				break;
 
-			case 2: //Save swimmer
-				init_before_switch();
-				//clear_ready_to_save();
-
-				//turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
-				//go_straight(3000); // à modifier avec IR
-				//turn_right(HALF_TURN_COUNT/2, 10);
-
-				//turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
-
-				//
+			case 2: //Save swimmer: brings swimmer back to beach
+				init_before_switch(); // pause all threads
 
 				turn_left(HALF_TURN_COUNT, 4);
-				//int i = 2;
 
-			   while (get_prox(7) < 78){// && (get_prox(0) < 78)){
-				   //for(i=2; i < 10; i++){
-					   right_motor_set_speed(MOTOR_SPEED_LIMIT);
-					   left_motor_set_speed(MOTOR_SPEED_LIMIT);
-				   //}
-			   }
+			    while (get_prox(7) < 78){
+					  right_motor_set_speed(MOTOR_SPEED_LIMIT);
+					  left_motor_set_speed(MOTOR_SPEED_LIMIT);
+			    }
 
 			   	turn_right(HALF_TURN_COUNT, 8);
 			   	go_straight(700);
 
-
 			   	clear_lake();
-
 
 				state = 0;
 
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
-				//ready_to_save = 1;
-
-				//une fois à la plage, retourner dans le case 0;
-
-				//state = 3;
-
-				//clear_leds();
-
-			//	state = 0;
-
-				//clear_ready_to_save();
 
 				break;
 
@@ -212,24 +183,8 @@ int main(void)
     }
 
     clear_leds();
-    //set_front_led(1);
     set_body_led(0);
-	//Here : bring swimmers back on beach
 
-
-
-    /* Spoon test */
-	/* ===================================== */
-	//turn_around_left(HALF_TURN_COUNT);
-	//go_straight(2000);
-	//turn_around_right(HALF_TURN_COUNT);
-	//go_straight(1000);
-
-
-
-    /* Music test */
-    /* ===================================== */
-	//victory_start();
 
     /* Infinite loop. */
     while (1) {

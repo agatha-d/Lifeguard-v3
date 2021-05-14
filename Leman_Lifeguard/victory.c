@@ -8,16 +8,6 @@
 #include <audio/play_sound_file.h>
 #include "leds.h"
 
-// Melodies available
-// MARIO_FLAG : éventuellement pour victoire ?)
-// WE_ARE_THE_CHAMPIONS : trèèèèèès aigu aïe mes oreilles
-// IMPOSSIBLE_MISSION => for searching swimmers//
-// UNDERWORLD : ressemble un peu à musqiue d'attente puis défaite
-// PIRATES_OF_THE_CARIBBEAN : un peu aigu aussi, et un peu lent
-// SEVEN_NATION_ARMY : why not victory mais je préfère mario flag
-
-
-
 // Thread inspired from main.c of the teacher's src file for animation
 
 static THD_WORKING_AREA(waVictoryMusic, 256);
@@ -45,12 +35,6 @@ static THD_FUNCTION(VictoryMusic, arg) {
     	 //int led;
     	 switch(rgb_state) {
     	 case 0: // Red.
-    		 /*for (i = 0 ; i < 27 ; i++){
-    			 uint16_t pause = (uint16_t)(1000 / victory_tempo[i]); //ne fonctionne pas
-    			 led = i%8;
-    			 set_rgb_led(led, 10, 0, 0);
-    			 chThdSleepMilliseconds(pause);
-    		 }*/
     		 set_rgb_led(0, 10, 0, 0);
     		 set_rgb_led(1, 10, 0, 0);
     		 set_rgb_led(2, 10, 0, 0);
@@ -73,8 +57,6 @@ static THD_FUNCTION(VictoryMusic, arg) {
     	 if(rgb_counter == 30) {
     		 rgb_counter = 0;
     		 rgb_state = (rgb_state+1)%3;
-    		 //set_body_led(2);
-    		 //set_front_led(2);
     	 }
     	 melody_counter++;
     	 if(melody_counter == 20) {
