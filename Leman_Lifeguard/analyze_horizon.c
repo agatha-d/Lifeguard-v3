@@ -127,12 +127,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 			im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
 		}*/
 
-		//search for a swimmer in the image and gets its width in pixels
-		//if((shore_to_search == 0) || (shore_to_search == 2)){
-			SwimmerWidth = extract_swimmer_width(im_diff_red);
-		//} else {
-			//SwimmerWidth = 0; // pour lintant test au cas où variables statiques pas réinitialisées correctement
-		//}
+		SwimmerWidth = extract_swimmer_width(im_diff_red);
 
 		if(shore_to_search == 1){
 			left_shore =  extract_left_shore(imb, img, imr);
@@ -180,8 +175,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	uint16_t i = 0, begin = 0, end = 0;
 	uint8_t stop = 0;
 	uint32_t mean = 0;
+
 	int out = 0, end_of_buffer = 0;
-	//static uint16_t last_width = PXTOCM/GOAL_DISTANCE; //utile?
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){ //Performs an average
 		mean += buffer[i];
@@ -227,7 +222,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 		    if (!end) //if no end was not found, get out of loop
 		    {
-		        //swimmer_not_found = 1;
 		        swimmer = 0;
 		    }
 		}
@@ -276,7 +270,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 		//clear_leds();
 		//set_front_led(1);
-		//last_width = width = (end - begin);
 		width = (end - begin);
 		swimmer_position = (begin + end)/2; //gives the swimmer position.
 	}
@@ -301,6 +294,10 @@ uint16_t get_swimmer_width(void){
 }
 
 uint16_t get_left_shore_position(void){
+	return left_shore_position;
+}
+
+uint16_t get_right_shore_position(void){
 	return left_shore_position;
 }
 
@@ -490,10 +487,13 @@ int get_right_shore(void)
 	return right_shore;
 }
 
+// à modifier pour n'avoir plus que les positions
 void reset_shore(void)
 {
 	right_shore = 0;
 	left_shore = 0;
+	right_shore_position = 0;
+	left_shore_position = 0;
 }
 
 

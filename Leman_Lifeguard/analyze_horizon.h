@@ -43,6 +43,10 @@ int get_left_shore(void);
 
 int get_right_shore(void);
 
+uint16_t get_left_shore_position(void);
+
+uint16_t get_right_shore_position(void);
+
 void search_left_shore(void);
 
 void search_right_shore(void);

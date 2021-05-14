@@ -141,7 +141,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     	{
     		wait_im_ready(); // utile ici ?
 
-    		search_left_shore(); // semble avoir déjà gardé en mémoire une mauvaise valeur de
+    		search_left_shore();
 
     		// Turns left until finds left shore
 
@@ -152,7 +152,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     			left_motor_set_speed(- MOTOR_SPEED_LIMIT/10);
     		}
 
-    		// pourquoi va si loin côté gauche ?
 
     		right_motor_set_speed(0);
     		left_motor_set_speed(0);
@@ -164,39 +163,35 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			search_right_shore();
 
-			//Turns right until finds a swimmer or the right shore
+			if(swimmer_found && get_left_shore()){
+				if(get_swimmer_position() < get_left_shore_position()){
+					swimmer_found = 0;
+				}
+			}
+
+			// Turns right until finds a swimmer or the right shore
 			// Stops as soon as the shore line enters its field of view
-			//this way, swimmers already on the beach cannot be seen
+			// this way, swimmers already on the beach cannot be seen
 
-			// fonctionnait hier, maintenant semble faire systématiquement le même angle et sortir du while sans entrer dans le PID?!?!
-
-			while((!swimmer_found) && (!get_right_shore())){ // loop in the loop for the case where ball and right shore seen at the same time
-			/*while(!swimmer_found){
-				wait_im_ready(); // utile ?
-				if(!get_right_shore()){ // ne semble pas voir le swimmer ni le right shore avec cette condition
-				//wait_im_ready(); // ne change rien*/
-
+			while((!swimmer_found) && (!get_right_shore())){
 				set_led(LED3, 1);
 
 				right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
 				left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
-				//}
 			}
-
 
 
 			wait_im_ready(); // utile ?
 
 			// test to avoid case where swimmer and shore both in field of view
-/*
-			// globalement ok maintenant mais fonce vers le right shor quand le détecte... pense que c'est un swimmer ?
+
 			if(swimmer_found && get_right_shore()){
-				// ici ajouter condition sur position du swimmer par rapport à position du shore
-				clear_shore();
-				reset_shore();
-			}*/
+				if(get_swimmer_position() > get_right_shore_position()){
+					swimmer_found = 0;
+				}
+			}
 
 			right_motor_set_speed(0);
 			left_motor_set_speed(0);
@@ -206,16 +201,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 
 			if (swimmer_found){
-
-				/*// Ne fonctionne PAS DU TOUT, reste infiniment dans la boucle et tourne sur lui même
-				// Sauf si on le tient quelques secondes face à la balle le temps que la condition devienne fausse
-
-				while(abs(get_swimmer_position() - IMAGE_BUFFER_SIZE/2)> 30){
-					//wait_im_ready();
-					right_motor_set_speed(-MOTOR_SPEED_LIMIT/10);
-					left_motor_set_speed(+MOTOR_SPEED_LIMIT/10);
-					turn_count = (left_motor_get_pos() - initial_count);
-				}*/
 
 				right_motor_set_speed(0); // peut ere pas nécessaire, choisir avant ou après les if
 				left_motor_set_speed(0);
@@ -236,7 +221,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			}
 
 			lake_scanned = 1;
-			//set_body_led(1);
 
     	}
     	//100Hz
