@@ -4,30 +4,34 @@
 #include <usbcfg.h>
 #include <math.h>
 
-#include <main.h>
 #include <camera/po8030.h>
-#include<leds.h>
+#include <leds.h>
 
+#include <main.h>
 #include <analyze_horizon.h>
 
 
+/* Declaration of static variables */
+/* =========================================================================== */
+
 static float distance_cm = 0;
-static uint16_t swimmer_position = IMAGE_BUFFER_SIZE/2;	//middle
 
-static int swimmer = 0;
-
-static int left_shore = 0;
-static int right_shore = 0;
+static uint16_t swimmer_position     = IMAGE_BUFFER_SIZE/2;	//middle
+static uint16_t left_shore_position  = 0;
+static uint16_t right_shore_position = 0;
 
 static uint16_t width = 0;
 
-uint16_t left_shore_position = 0;
-uint16_t right_shore_position = 0;
+static _Bool swimmer     = 0;
+static _Bool left_shore  = 0;
+static _Bool right_shore = 0;
 
-int shore_to_search = 0; //= 1 for left shore,  2 for right shore, 0 default
+static int shore_to_search = 0; //= 1 for left shore,  2 for right shore, 0 default
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
+
+/* =========================================================================== */
 
 void wait_im_ready(void){
 	chBSemWait(&image_ready_sem);
@@ -136,10 +140,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 }
 
 
-/*
- *Returns the swimmer's width extracted from the image buffer given
- *Returns 0 if Swimmer not found
- */
 uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	uint16_t i = 0, begin = 0, end = 0;
@@ -264,7 +264,7 @@ uint16_t get_right_shore_position(void){
 	return left_shore_position;
 }
 
-int get_left_shore(void){
+_Bool get_left_shore(void){
 	return left_shore;
 }
 
@@ -353,7 +353,7 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 
 
 //à faire : changer pour qu'il faille juste échanger les buffer_blue et green dans l'appel de fonction
-int extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
+_Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
 	int8_t tmp = 0;
 	int stop = 0;
@@ -390,7 +390,7 @@ int extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buf
 }
 
 //pour le moment deux fct différentes (temporaire)
-int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
+_Bool extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
 	int8_t tmp = 0;
 	int stop = 0;
@@ -427,7 +427,7 @@ int extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *bu
 }
 
 
-int get_right_shore(void)
+_Bool get_right_shore(void)
 {
 	return right_shore;
 }
