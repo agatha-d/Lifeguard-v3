@@ -204,8 +204,6 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			clear_shore();
 			clear_leds();
 
-			//Fait tout bien dans le bleu mais pas dans le vert
-
 
 			if (swimmer_found){
 
@@ -238,7 +236,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			}
 
 			lake_scanned = 1;
-			set_body_led(1);
+			//set_body_led(1);
 
     	}
     	//100Hz

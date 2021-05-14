@@ -68,7 +68,7 @@ int main(void)
     usb_start();
     dcmi_start(); //starts the camera
 
-    po8030_start();
+   po8030_start();
     po8030_set_ae(0); //test disable auto exposure 0=disable, 1 = able
     po8030_set_awb(0); // test disable auto white balance0=disable, 1 = able
     po8030_set_rgb_gain(0x20, 0x20, 0x20); // test same gain =1 for every color
@@ -88,7 +88,7 @@ int main(void)
     uint8_t state = 0;
 
     // Make sure no random thread will start to execute
-    init_before_switch();
+    init_before_switch(); //A RERAJOUTER
 
     // Initialisation of threads for finite state machine
     capture_image_start();
@@ -102,34 +102,41 @@ int main(void)
 
 
 
+
+
    while(!all_swimmers_saved)
    {
+
+
 		switch(state) {
 
 			case 0: // Search for swimmer to save
 
-				//clear_ready_to_save();
-
 				clear_leds();
-				//set_body_led(0);
+				set_body_led(1);
 				set_front_led(0);
 
 				switch_to_search_swimmer(); // problem : can't display image anymore
 
 				if(get_lake_scanned()){
-					//set_body_led(1);
+
 					if(get_empty_lake()){	//if not swimmer found go to victory
 						state = 3;
 					}
 
 					if(!get_empty_lake()){	//if swimmer found go to swimmer
-						//set_front_led(1);
 						state = 1;
 					}
 				}
 				break;
 
+				clear_ready_to_save();
+
 			case 1: // Go to swimmer
+
+				set_body_led(0);
+
+				//clear_ready_to_save();
 
 				//clear_leds();
 
@@ -142,24 +149,52 @@ int main(void)
 
 			case 2: //Save swimmer
 				init_before_switch();
+				//clear_ready_to_save();
 
-				turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
-				go_straight(3000); // à modifier avec IR
-				turn_right(HALF_TURN_COUNT/2, 10);
+				//turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
+				//go_straight(3000); // à modifier avec IR
+				//turn_right(HALF_TURN_COUNT/2, 10);
 
-				clear_ready_to_save();//????
+				//turn_left(HALF_TURN_COUNT + get_step_to_turn(), 10);
 
-				state = 3;
+				//
 
-				clear_leds();
+				turn_left(HALF_TURN_COUNT, 4);
+				//int i = 2;
+
+			   while (get_prox(7) < 78){// && (get_prox(0) < 78)){
+				   //for(i=2; i < 10; i++){
+					   right_motor_set_speed(MOTOR_SPEED_LIMIT);
+					   left_motor_set_speed(MOTOR_SPEED_LIMIT);
+				   //}
+			   }
+
+			   	turn_right(HALF_TURN_COUNT, 8);
+
 
 				state = 0;
+
+				right_motor_set_speed(0);
+				left_motor_set_speed(0);
+				//ready_to_save = 1;
+
+				//une fois à la plage, retourner dans le case 0;
+
+				//state = 3;
+
+				//clear_leds();
+
+			//	state = 0;
+
+				//clear_ready_to_save();
+
 				break;
 
 			case 3://certaines thread doivent continuer de fonctionner
 				init_before_switch();
 
 				set_front_led(1);
+				set_body_led(0);
 
 				right_motor_set_speed(0);
 				left_motor_set_speed(0);
@@ -176,11 +211,11 @@ int main(void)
 				break;
 		}
     }
+
     clear_leds();
     //set_front_led(1);
     set_body_led(0);
 	//Here : bring swimmers back on beach
-
 
 
 
@@ -190,6 +225,7 @@ int main(void)
 	//go_straight(2000);
 	//turn_around_right(HALF_TURN_COUNT);
 	//go_straight(1000);
+
 
 
     /* Music test */
