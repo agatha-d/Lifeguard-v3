@@ -391,7 +391,7 @@ _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *b
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		tmp = 2*buffer_green[i] + buffer_red[i] - buffer_blue[i];//2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
+		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
 		if (tmp <15){
 			tmp = 0;
 		}
