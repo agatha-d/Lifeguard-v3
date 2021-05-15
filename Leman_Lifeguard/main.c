@@ -1,3 +1,7 @@
+#include "ch.h"
+#include "hal.h"
+#include "memory_protection.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,10 +25,6 @@
 #include <navigation.h>
 #include <victory.h>
 #include <sensors/proximity.h>
-
-#include "ch.h"
-#include "hal.h"
-#include "memory_protection.h"
 
 /* ======================================= */
 
@@ -106,39 +106,37 @@ int main(void)
    {
 		switch(state) {
 
-			case 0: // Search for swimmer to save
+			case ANALYSING: // Search for swimmer to save
 
-				clear_leds();
 				set_body_led(1);
-				set_front_led(0);
 
 				switch_to_search_swimmer();
 
 				if(get_lake_scanned()){
 
 					if(get_empty_lake()){	//if not swimmer found go to victory
-						state = 3;
+						state = VICTORY;
 					}
 
 					if(!get_empty_lake()){	//if swimmer found go to swimmer
-						state = 1;
+						state = BEGIN_RESCUE;
 					}
 				}
 				clear_ready_to_save();
 				break;
 
-			case 1: // Go to swimmer
+			case BEGIN_RESCUE: // Go to swimmer
 
 				set_body_led(0);
 
 				switch_to_go_to_swimmer();
 
 				if(get_ready_to_save()){
-					state = 2;
+					state = FINISH_RESCUE;
 				}
 				break;
 
-			case 2: //Save swimmer: brings swimmer back to beach
+			case FINISH_RESCUE: //Save swimmer: brings swimmer back to beach
 
 				init_before_switch(); // pause all threads
 				stop_analyzing();
@@ -172,7 +170,7 @@ int main(void)
 
 				break;
 
-			case 3:// Victory: no more swimmers in the lake
+			case VICTORY:// Victory: no more swimmers in the lake
 
 				init_before_switch();
 

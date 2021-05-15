@@ -1,3 +1,7 @@
+#include "leds.h"
+#include "ch.h"
+#include "hal.h"
+
 #include <usbcfg.h>
 
 #include <motors.h>

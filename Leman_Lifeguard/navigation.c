@@ -1,4 +1,5 @@
 #include "ch.h"
+
 #include <chprintf.h>
 #include <chthreads.h>
 #include <sensors/proximity.h>

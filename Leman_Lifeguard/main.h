@@ -19,6 +19,12 @@ extern "C" {
 #define GOAL_DISTANCE 			5.0f   //5.0f
 #define MAX_DISTANCE 			25.0f
 
+//constants for the four states
+#define ANALYSING 			0
+#define BEGIN_RESCUE 		1
+#define FINISH_RESCUE 		2
+#define VICTORY				3
+
 
 /** Robot wide IPC bus. */
 extern messagebus_t bus;
