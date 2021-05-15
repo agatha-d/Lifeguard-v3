@@ -4,7 +4,7 @@
 /* Define PI controller coefficients for rotation
  * and going straight here in order to be easily tuned
  */
-#define KP						17.0f //17.0f // 15
+#define KP						18.0f //17.0f // 15
 #define KI 						0.001f	//must not be zero //0.001f
 #define MAX_SUM_ERROR 			(MOTOR_SPEED_LIMIT/KI)
 #define ROTATION_THRESHOLD		10

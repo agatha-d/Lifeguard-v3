@@ -147,14 +147,17 @@ int main(void)
 				turn_left(HALF_TURN_COUNT, 4);
 
 				//go_straight(700);
+				//right_motor_set_speed(0);
+				//left_motor_set_speed(0);
 
-				wait_prox_ready();
 
-			    while (get_prox(7) < 78){
-					  right_motor_set_speed(MOTOR_SPEED_LIMIT);
-					  left_motor_set_speed(MOTOR_SPEED_LIMIT);
+				//wait_prox_ready();
+
+			    do{
+					  right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
+					  left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
 					  wait_prox_ready();
-			    }
+			    } while (get_prox(7) < 78);
 
 			   	turn_right(HALF_TURN_COUNT, 8);
 			   	go_straight(700);
