@@ -3,9 +3,6 @@
 #include <string.h>
 #include <math.h>
 
-#include "ch.h"
-#include "hal.h"
-#include "memory_protection.h"
 #include <usbcfg.h>
 #include <motors.h>
 #include <camera/po8030.h>
@@ -25,6 +22,10 @@
 #include <victory.h>
 #include <sensors/proximity.h>
 
+#include "ch.h"
+#include "hal.h"
+#include "memory_protection.h"
+
 /* ======================================= */
 
 //Proximity captor : 10 -> 100 Hz ??? quoi ?
@@ -33,7 +34,7 @@ messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-// Nécessaire pour programme final
+// Est-ce nécessaire pour le programme final??
 void SendUint8ToComputer(uint8_t* data, uint16_t size) 
 {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
@@ -84,10 +85,6 @@ int main(void)
     set_body_led(0);
     set_front_led(0);
 
-    _Bool all_swimmers_saved = 0;
-
-    uint8_t state = 0;
-
     // Make sure no random thread will start to execute
     init_before_switch();
 
@@ -101,6 +98,9 @@ int main(void)
     start_analyzing();
 
     // Main loop for finite state machine management
+
+    _Bool all_swimmers_saved = 0;
+     uint8_t state = 0;
 
    while(!all_swimmers_saved)
    {

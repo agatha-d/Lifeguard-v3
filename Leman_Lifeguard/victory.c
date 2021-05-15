@@ -1,5 +1,3 @@
-#include "ch.h"
-#include "hal.h"
 #include <usbcfg.h>
 
 #include <motors.h>
@@ -7,6 +5,8 @@
 #include <audio/play_melody.h>
 #include <audio/play_sound_file.h>
 #include "leds.h"
+#include "ch.h"
+#include "hal.h"
 
 // Thread inspired from main.c of the teacher's src file for animation
 
