@@ -159,8 +159,8 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			step_to_turn = 0;
 			initial_count = left_motor_get_pos();
 
-			if(swimmer_found && get_left_shore()){
-				if(get_swimmer_position() <= get_left_shore_position()){
+			if(swimmer_found && get_left_shore()){ // ajout deuxième condition
+				if((get_swimmer_position() <= get_left_shore_position()) || abs(get_swimmer_position() - get_left_shore_position()) < 50){
 					swimmer_found = 0;
 				}
 			}
@@ -175,14 +175,14 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			while((!swimmer_found) && (!get_right_shore())){
 				set_led(LED3, 1);
 				wait_im_ready();
-				right_motor_set_speed(-MOTOR_SPEED_LIMIT/12);
-				left_motor_set_speed(+MOTOR_SPEED_LIMIT/12);
+				right_motor_set_speed(- MOTOR_SPEED_LIMIT/12);
+				left_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
 				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
 			}
 
 			if(swimmer_found && get_right_shore()){
-				if(get_swimmer_position() >= get_right_shore_position()){
+				if((get_swimmer_position() >= get_right_shore_position())  || abs(get_swimmer_position() - get_left_shore_position()) < 50){
 					swimmer_found = 0;
 				}
 			}

@@ -94,7 +94,7 @@ int main(void)
     // Initialisation of threads for finite state machine
     capture_image_start();
     process_image_start();
-/*
+
     search_swimmer_start();
     go_to_swimmer_start();
 
@@ -181,7 +181,7 @@ int main(void)
     }
 
     clear_leds();
-    set_body_led(0);*/
+    set_body_led(0);
 
 
     /* Infinite loop. */

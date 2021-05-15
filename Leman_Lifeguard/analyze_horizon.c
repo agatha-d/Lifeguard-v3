@@ -44,7 +44,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 228 + 229 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 201, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 205, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -136,15 +136,6 @@ static THD_FUNCTION(ProcessImage, arg) {
 			}
 		}
 
-		for(int i = 0; i<IMAGE_BUFFER_SIZE ; i++){
-			tmpb = 3*img[i]/2 - imr[i]/2- 2*imb[i];// - imr[i];//qd petit = il y a du vert
-			if (tmpb <10){
-				tmpb = 0;
-			}
-			im_diff_blue[i] = tmpb;
-		}
-
-
 
 		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
@@ -168,7 +159,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		if(send_to_computer){
 
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_blue, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
 		}
 		//invert the bool : only shows 1 image out of 2
 		send_to_computer = !send_to_computer;
@@ -400,7 +391,7 @@ _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *b
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
+		tmp = 2*buffer_green[i] + buffer_red[i] - buffer_blue[i];//2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
 		if (tmp <15){
 			tmp = 0;
 		}
