@@ -98,6 +98,8 @@ int main(void)
     search_swimmer_start();
     go_to_swimmer_start();
 
+    start_analyzing();
+
     // Main loop for finite state machine management
 
    while(!all_swimmers_saved)
@@ -139,14 +141,19 @@ int main(void)
 			case 2: //Save swimmer: brings swimmer back to beach
 
 				init_before_switch(); // pause all threads
-
+				stop_analyzing();
 				// à faire dans une fonction
 
 				turn_left(HALF_TURN_COUNT, 4);
 
+				//go_straight(700);
+
+				wait_prox_ready();
+
 			    while (get_prox(7) < 78){
 					  right_motor_set_speed(MOTOR_SPEED_LIMIT);
 					  left_motor_set_speed(MOTOR_SPEED_LIMIT);
+					  wait_prox_ready();
 			    }
 
 			   	turn_right(HALF_TURN_COUNT, 8);
@@ -154,6 +161,7 @@ int main(void)
 
 			   	clear_lake();
 
+			   	start_analyzing();
 				state = 0;
 
 				right_motor_set_speed(0);

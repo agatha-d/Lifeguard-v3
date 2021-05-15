@@ -47,6 +47,9 @@ int16_t crawl_to_swimmer(float distance, float goal){
 	}
 
 	speed = KP * err + KI * sum_error;
+	if(speed){
+	} else {
+	}
 
     return (int16_t)speed;
 }
@@ -95,7 +98,7 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 
 				// when close enough and aligned, sprint with IR sensors
 
-				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 5)))
+				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 8)))
 				{
 					while (get_prox(0) < 150){
 						right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
@@ -189,6 +192,8 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			right_motor_set_speed(0);
 			left_motor_set_speed(0);
+
+			//wait_im_ready(); // test
 
 			clear_shore();
 			clear_leds();

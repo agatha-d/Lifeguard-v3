@@ -96,6 +96,8 @@ _Bool get_left_shore(void);
 
 _Bool get_right_shore(void);
 
+void start_analyzing (void);
 
+void stop_analyzing (void);
 
 #endif /* PROCESS_IMAGE_H */

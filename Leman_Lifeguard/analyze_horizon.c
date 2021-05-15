@@ -25,6 +25,7 @@ static uint16_t width = 0;
 static _Bool swimmer     = 0;
 static _Bool left_shore  = 0;
 static _Bool right_shore = 0;
+static _Bool analyzing = 0;
 
 static int shore_to_search = 0; //= 1 for left shore,  2 for right shore, 0 default
 
@@ -42,9 +43,9 @@ static THD_FUNCTION(CaptureImage, arg) {
 
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
-
+// 228
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 228 + 229 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 205, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 213, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -84,85 +85,92 @@ static THD_FUNCTION(ProcessImage, arg) {
 	_Bool send_to_computer = true;
 
 	while(1){
-		//waits until an image has been captured
-		chBSemWait(&image_ready_sem);
 
-		//gets the pointer to the array filled with the last image in RGB565
-		img_buff_ptr = dcmi_get_last_image_ptr();
+			//waits until an image has been captured
+			chBSemWait(&image_ready_sem);
 
-		/* Separate RGB values for each pixel
-		 * The MSB for the three colors are aligned on the bit 6
-		 * Big endian format
-		 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
-		 * Next pixel = img_buff_pointer[i+2]
-		 */
-		for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+			if(analyzing){
 
-			imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8) >> 2;
-			img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
-			imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
+				//gets the pointer to the array filled with the last image in RGB565
+				img_buff_ptr = dcmi_get_last_image_ptr();
 
-			// Creation of the buffer to recognise swimmers
-			// Adapt signal to transform swimmers as neat rectangles
-			tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
-			if (tmp <7){
-				tmp = 0;
-			}
-			im_diff_red[i/2] = tmp;
+				/* Separate RGB values for each pixel
+				 * The MSB for the three colors are aligned on the bit 6
+				 * Big endian format
+				 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
+				 * Next pixel = img_buff_pointer[i+2]
+				 */
+				for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
+
+					imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8) >> 2;
+					img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
+					imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
+
+					// Creation of the buffer to recognise swimmers
+					// Adapt signal to transform swimmers as neat rectangles
+					tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
+					if (tmp < 4){
+						tmp = 0;
+					}
+					//if (tmp > 15){
+					//	tmp = 40;
+					//}
+					im_diff_red[i/2] = tmp;
+				}
+
+				//Smoothing the signal to reduce noise with moving average
+				int n = 10;
+
+				for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
+				{
+					im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
+											+ im_diff_red[k+3] + im_diff_red[k+4]
+											+ im_diff_red[k+5] + im_diff_red[k+6]
+											+ im_diff_red[k+7] + im_diff_red[k+8]
+											+ im_diff_red[k+9])/10;
+
+					//im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
+				}
+
+				for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
+				{
+					im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
+				}
+
+				for(int k = 0; k<IMAGE_BUFFER_SIZE ; k++){
+					if(im_diff_red_smooth[k] >4){
+						im_diff_red_smooth[k] = 50;
+					}
+				}
+
+
+				SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
+
+				if(shore_to_search == 1){
+					left_shore =  extract_left_shore(imb, img, imr);
+				} else {
+					left_shore = 0;
+				}
+
+				if(shore_to_search == 2){
+					right_shore = extract_right_shore(imb, img, imr);
+				} else {
+					right_shore = 0;
+				}
+
+				//converts the width into a distance between the robot and the camera
+				if(SwimmerWidth){
+					distance_cm = PXTOCM/SwimmerWidth;
+				}
+
+				/*if(send_to_computer){
+
+					//sends to the computer the image
+					SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+				}
+				//invert the bool : only shows 1 image out of 2
+				send_to_computer = !send_to_computer;*/
 		}
-
-		//Smoothing the signal to reduce noise with moving average
-		int n = 10;
-
-		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
-		{
-			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
-									+ im_diff_red[k+3] + im_diff_red[k+4]
-									+ im_diff_red[k+5] + im_diff_red[k+6]
-									+ im_diff_red[k+7] + im_diff_red[k+8]
-									+ im_diff_red[k+9])/10;
-
-			//im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
-		}
-
-		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
-		{
-			im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
-		}
-
-		for(int k = 0; k<IMAGE_BUFFER_SIZE ; k++){
-			if(im_diff_red_smooth[k] >13){
-				im_diff_red_smooth[k] = 50;
-			}
-		}
-
-
-		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
-
-		if(shore_to_search == 1){
-			left_shore =  extract_left_shore(imb, img, imr);
-		} else {
-			left_shore = 0;
-		}
-
-		if(shore_to_search == 2){
-			right_shore = extract_right_shore(imb, img, imr);
-		} else {
-			right_shore = 0;
-		}
-
-		//converts the width into a distance between the robot and the camera
-		if(SwimmerWidth){
-			distance_cm = PXTOCM/SwimmerWidth;
-		}
-
-		if(send_to_computer){
-
-			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
-		}
-		//invert the bool : only shows 1 image out of 2
-		send_to_computer = !send_to_computer;
 	}
 }
 
@@ -483,3 +491,10 @@ void search_right_shore(void){
 	shore_to_search = 2;
 }
 
+void start_analyzing (void){
+	analyzing = 1;
+}
+
+void stop_analyzing (void){
+	analyzing = 0;
+}
