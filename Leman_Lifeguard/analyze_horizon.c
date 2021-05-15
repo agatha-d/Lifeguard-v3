@@ -44,7 +44,7 @@ static THD_FUNCTION(CaptureImage, arg) {
     (void)arg;
 
 	//Takes pixels 0 to IMAGE_BUFFER_SIZE of the line 228 + 229 (minimum 2 lines because reasons)
-	po8030_advanced_config(FORMAT_RGB565, 0, 228, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
+	po8030_advanced_config(FORMAT_RGB565, 0, 201, IMAGE_BUFFER_SIZE, 2, SUBSAMPLING_X1, SUBSAMPLING_X1);
 	dcmi_enable_double_buffering();
 	dcmi_set_capture_mode(CAPTURE_ONE_SHOT);
 	dcmi_prepare();
@@ -72,9 +72,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
 	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
 
-	uint8_t im_diff_red[IMAGE_BUFFER_SIZE] = {0}; // 2*red - blue - green
+	uint8_t im_diff_red[IMAGE_BUFFER_SIZE]        = {0}; // 2*red - blue - green
+	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
+
+	uint8_t im_diff_blue[IMAGE_BUFFER_SIZE]       = {0};
 
 	int8_t tmp = 0;
+	int8_t tmpb = 0;
 	uint16_t SwimmerWidth = 0;
 
 	_Bool send_to_computer = true;
@@ -101,16 +105,48 @@ static THD_FUNCTION(ProcessImage, arg) {
 			// Creation of the buffer to recognise swimmers
 			// Adapt signal to transform swimmers as neat rectangles
 			tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // Substract blue and green values in order to cancel red in other areas than swimmer
-			if (tmp <3){
+			if (tmp <7){
 				tmp = 0;
-			}
-			if (tmp > 3){
-				tmp = 40;
 			}
 			im_diff_red[i/2] = tmp;
 		}
 
-		SwimmerWidth = extract_swimmer_width(im_diff_red);
+		//Smoothing the signal to reduce noise with moving average
+		int n = 10;
+
+		for(int k = 0; k<IMAGE_BUFFER_SIZE-n+1 ; k++)
+		{
+			im_diff_red_smooth[k] = (im_diff_red[k]+im_diff_red[k+1]+im_diff_red[k+2]
+									+ im_diff_red[k+3] + im_diff_red[k+4]
+									+ im_diff_red[k+5] + im_diff_red[k+6]
+									+ im_diff_red[k+7] + im_diff_red[k+8]
+									+ im_diff_red[k+9])/10;
+
+			//im_diff_red_smooth[k] = smoothing(im_diff_red, k, n);
+		}
+
+		for(int k = IMAGE_BUFFER_SIZE-n+1; k<IMAGE_BUFFER_SIZE ; k++)
+		{
+			im_diff_red_smooth[k] = im_diff_red[k]; // values for the extremities of the buffer
+		}
+
+		for(int k = 0; k<IMAGE_BUFFER_SIZE ; k++){
+			if(im_diff_red_smooth[k] >13){
+				im_diff_red_smooth[k] = 50;
+			}
+		}
+
+		for(int i = 0; i<IMAGE_BUFFER_SIZE ; i++){
+			tmpb = 3*img[i]/2 - imr[i]/2- 2*imb[i];// - imr[i];//qd petit = il y a du vert
+			if (tmpb <10){
+				tmpb = 0;
+			}
+			im_diff_blue[i] = tmpb;
+		}
+
+
+
+		SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
 		if(shore_to_search == 1){
 			left_shore =  extract_left_shore(imb, img, imr);
@@ -132,7 +168,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 		if(send_to_computer){
 
 			//sends to the computer the image
-			SendUint8ToComputer(im_diff_red, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
+			SendUint8ToComputer(im_diff_blue, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
 		}
 		//invert the bool : only shows 1 image out of 2
 		send_to_computer = !send_to_computer;
@@ -401,7 +437,7 @@ _Bool extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
 
-		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];//qd petit = il y a du vert
+		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];//qd grand = il y a du vert
 		if (tmp <15){
 			tmp = 0;
 		}
