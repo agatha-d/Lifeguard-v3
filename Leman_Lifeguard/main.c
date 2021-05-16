@@ -68,6 +68,7 @@ int main(void){
     // Init the Inter Process Communication bus.
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
+
     // Initialisation of peripherals
     serial_start();
     usb_start();
@@ -88,9 +89,12 @@ int main(void){
     // Initialization of threads for finite state machine
     capture_image_start();
     process_image_start();
+
     search_swimmer_start();
+
     go_to_swimmer_start();
     start_analyzing();//=>on peut juste initialiser à 1 la variable analysing sinon<=
+
 
    while(!all_swimmers_saved) { // Main loop for finite state machine management
 

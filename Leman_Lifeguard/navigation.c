@@ -11,35 +11,33 @@
 #include <navigation.h>
 #include <analyze_horizon.h>
 #include <victory.h>
+#include <sensors/proximity.h>
 
+/* ======================================= */
 
 static _Bool empty_lake = 0;
 static _Bool lake_scanned = 0;
 static _Bool ready_to_save = 0;
+static int mode = MOTIONLESS_STATE; //initialized with a value that is not in the switch (main.c) in order not to start a random thread
 
-static int step_to_turn = 0;
 
-static int mode = 5; //initialized with a value that is not in the switch (main.c) in order not to start a random thread
 
 //simple PI regulator implementation
 int16_t crawl_to_swimmer(float distance, float goal){
 
-	volatile float err = 0;
-	volatile float speed = 0;
-
+	volatile float err = 0, speed = 0;
 	static float sum_error = 0;
 
 	err = distance - goal;
 
 	//disables the PI regulator if the error is to small
-	//to avoid permanent movement
 	if(fabs(err) < ERROR_THRESHOLD){
 		return 0;
 	}
 
 	sum_error += err;
 
-	//we set a maximum and a minimum for the sum to avoid an uncontrolled growth
+	//avoid an uncontrolled growth
 	if(sum_error > MAX_SUM_ERROR){
 		sum_error = MAX_SUM_ERROR;
 	}
@@ -50,7 +48,7 @@ int16_t crawl_to_swimmer(float distance, float goal){
 	speed = KP * err + KI * sum_error;
 	if(speed){
 	} else {
-	}
+	}//?????????????????//
 
     return (int16_t)speed;
 }
@@ -63,57 +61,50 @@ static THD_FUNCTION(GoToSwimmer, arg) {
     (void)arg;
 
     systime_t time;
+    int16_t speed = 0, speed_correction = 0, tmp = 0;
 
-    int16_t speed = 0;
-    int16_t speed_correction = 0;
+	while(1){
+		time = chVTGetSystemTime();
 
-		while(1){
-			time = chVTGetSystemTime();
-			if((mode==1) && (!ready_to_save)){
+		if((mode==BEGIN_RESCUE_STATE) && (!ready_to_save)){
+			//computes the speed to give to the motors
+			//distance_cm is modified by the image processing thread
 
-				//computes the speed to give to the motors
-				//distance_cm is modified by the image processing thread
+			speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE);
 
-				speed = crawl_to_swimmer(get_distance_cm(), GOAL_DISTANCE);
-
-				if(get_distance_cm() <= GOAL_DISTANCE){
-					speed = 0;
-				}
-
-				wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
-
-				int16_t tmp = get_swimmer_position();
-
-				//computes a correction factor to let the robot rotate to be in front of the line
-				speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
-
-				//if the swimmer is nearly in front of the camera, don't rotate
-				if(abs(speed_correction) < ROTATION_THRESHOLD){
-					speed_correction = 0;
-				}
-
-				//applies the speed from the PI regulator and the correction for the rotation
-
-				right_motor_set_speed(speed - ROT_KP * speed_correction);
-				left_motor_set_speed(speed + ROT_KP * speed_correction);
-
-				// when close enough and aligned, sprint with IR sensors
-
-				if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 8)))
-				{
-					while (get_prox(0) < 150){
-						right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
-						left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
-					}
-
-					right_motor_set_speed(0);
-					left_motor_set_speed(0);
-					ready_to_save = 1;
-				}
+			if(get_distance_cm() <= GOAL_DISTANCE){
+				speed = 0;
 			}
-			//100Hz
-			chThdSleepUntilWindowed(time, time + MS2ST(10));
+
+			wait_im_ready(); // Without this, turns further than real position of ball before correcting trajectory
+			tmp = get_swimmer_position();
+
+			//computes a correction factor to let the robot rotate to be in front of the line
+			speed_correction = (tmp - (IMAGE_BUFFER_SIZE/2));
+
+			//if the swimmer is nearly in front of the camera, don't rotate
+			if(abs(speed_correction) < ROTATION_THRESHOLD){
+				speed_correction = 0;
+			}
+
+			//applies the speed from the PI regulator and the correction for the rotation
+			right_motor_set_speed(speed - ROT_KP * speed_correction);
+			left_motor_set_speed(speed + ROT_KP * speed_correction);
+
+			// when close enough and aligned, sprint with IR sensors
+			if((speed_correction == 0) && (get_distance_cm() <= (GOAL_DISTANCE + 8)))
+			{
+				while (get_prox(0) < 150){
+					right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
+					left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
+				}
+				halt_robot();
+				ready_to_save = 1;
+			}
 		}
+		//100Hz
+		chThdSleepUntilWindowed(time, time + MS2ST(10));
+	}
 }
 
 
@@ -123,48 +114,34 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     chRegSetThreadName(__FUNCTION__);
     (void)arg;
 
+    int swimmer_found = 0;
     systime_t time;
 
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-
+    halt_robot();
 	wait_im_ready();
 	search_left_shore();
-
-
-    int turn_count = 0;
-    int swimmer_found = 0;
-    int initial_count = left_motor_get_pos();
-
     lake_scanned = 0;
 
     while(1){
     	time = chVTGetSystemTime();
-    	if((mode==0) && (!lake_scanned))
+    	if((mode==SEARCH_SWIMMER_STATE) && (!lake_scanned))
     	{
     		wait_im_ready();
-
     		search_left_shore();
 
-    		// Turns left until finds left shore
-
-    		while (!get_left_shore()){
+    		while (!get_left_shore()){// Turns left until finds left shore
     			wait_im_ready();
     			swimmer_found = 0;
     			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
     			left_motor_set_speed(- MOTOR_SPEED_LIMIT/12);
     		}
 
-    		right_motor_set_speed(0);
-    		left_motor_set_speed(0);
+    		halt_robot();
+    		wait_im_ready();
 
-    		wait_im_ready(); // IMPORTANT ICI (avant le search right shore)
-
-			step_to_turn = 0;
-			initial_count = left_motor_get_pos();
-
-			if(swimmer_found && get_left_shore()){ // ajout deuxième condition
-				if((get_swimmer_position() <= get_left_shore_position()) || abs(get_swimmer_position() - get_left_shore_position()) < 50){
+			if(swimmer_found && get_left_shore()){//Musn't detect swimmers on beach
+				if((get_swimmer_position() <= get_left_shore_position()) ||
+					(abs(get_swimmer_position() - get_left_shore_position()) < 50)){
 					swimmer_found = 0;
 				}
 			}
@@ -173,49 +150,32 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 
 			/* Turns right until finds a swimmer or the right shore
 			 * Stops as soon as the shore line enters its field of view
-			 * this way, swimmers already on the beach cannot be seen
+			 * -> swimmers already on the beach cannot be seen
 			 */
-
 			while((!swimmer_found) && (!get_right_shore())){
-				set_led(LED3, 1);
 				wait_im_ready();
 				right_motor_set_speed(- MOTOR_SPEED_LIMIT/12);
 				left_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
-				turn_count = (left_motor_get_pos() - initial_count);
 				swimmer_found = get_swimmer_width();
 			}
 
 			if(swimmer_found && get_right_shore()){
-				if((get_swimmer_position() >= get_right_shore_position())  || abs(get_swimmer_position() - get_left_shore_position()) < 50){
+				if((get_swimmer_position() >= get_right_shore_position())  ||
+							(abs(get_swimmer_position() - get_left_shore_position()) < 50)){
 					swimmer_found = 0;
 				}
 			}
 
-			right_motor_set_speed(0);
-			left_motor_set_speed(0);
-
-			//wait_im_ready(); // test
-
+			halt_robot();
 			clear_shore();
-			clear_leds();
-
 
 			if (swimmer_found){
-
-				right_motor_set_speed(0); // peut ere pas nécessaire, choisir avant ou après les if
-				left_motor_set_speed(0);
-
+				halt_robot();// peut ere pas nécessaire, choisir avant ou après les if->oui il est juste avant
 				empty_lake = 0;
-				step_to_turn = (HALF_TURN_COUNT/2) - turn_count;
-
 			}
 
 			if (!swimmer_found){
-
-				set_led(LED7, 1);
-
 				empty_lake = 1;
-				step_to_turn = 0;
 			}
 
 			lake_scanned = 1;
@@ -236,9 +196,90 @@ void search_swimmer_start(void){
 	chThdCreateStatic(waSearchSwimmer, sizeof(waSearchSwimmer), NORMALPRIO, SearchSwimmer, NULL);
 }
 
-
 void clear_ready_to_save(void){
 	ready_to_save = 0;
+}
+
+/* ================================================
+ * Finite state machine management functions : chose code to execute */
+
+void switch_to_search_swimmer(void){
+	mode = SEARCH_SWIMMER_STATE;
+}
+
+void switch_to_go_to_swimmer(void){
+	mode = BEGIN_RESCUE_STATE;
+}
+
+void init_before_switch(void){
+	mode = MOTIONLESS_STATE; // assign a value out of switch to make sure not to come back to another case
+}
+
+/* ================================================
+ * Simple navigation functions*/
+
+void turn_left(int turn_count, int div){
+
+	int initial_count = left_motor_get_pos();
+
+	halt_robot();
+	while (abs(left_motor_get_pos() - initial_count) < turn_count){
+		right_motor_set_speed(+MOTOR_SPEED_LIMIT/div);
+		left_motor_set_speed(-MOTOR_SPEED_LIMIT/div);
+	}
+	halt_robot();
+}
+
+void turn_right(int turn_count, int div){
+
+	int initial_count = left_motor_get_pos();
+
+	halt_robot();
+	while (abs(left_motor_get_pos() - initial_count) < turn_count){
+		right_motor_set_speed(-MOTOR_SPEED_LIMIT/div);
+		left_motor_set_speed(+MOTOR_SPEED_LIMIT/div);
+	}
+	halt_robot();
+}
+
+void go_straight(float distance){
+
+	int initial_count = left_motor_get_pos();
+
+	halt_robot();
+	while (abs(left_motor_get_pos() - initial_count) < distance){
+		right_motor_set_speed(MOTOR_SPEED_LIMIT/4);
+		left_motor_set_speed(MOTOR_SPEED_LIMIT/4);
+	}
+	halt_robot();
+}
+
+void clear_lake (void){
+	lake_scanned = 0;
+}
+
+void bring_swimmer_to_beach(void){
+
+	turn_left(HALF_TURN_COUNT, 4);
+	messagebus_topic_t *prox_topic = messagebus_find_topic_blocking(&bus, "/proximity");
+	proximity_msg_t prox_values;
+
+    do{
+		  right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
+		  left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
+		 // wait_prox_ready();
+		  messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));
+
+    } while (get_prox(IR8) < IR_THRESHOLD);
+
+   	turn_right(HALF_TURN_COUNT, 8);
+   	go_straight(MOVE_AWAY);
+
+}
+
+void halt_robot(void){
+	right_motor_set_speed(0);
+	left_motor_set_speed(0);
 }
 
 /* ================================================
@@ -255,76 +296,4 @@ _Bool get_lake_scanned(void){
 _Bool get_ready_to_save(void){
 	return ready_to_save;;
 }
-
-int get_step_to_turn(){
-	return step_to_turn ; //= (HALF_TURN_COUNT/2) - turn_count;
-}
-
-/* ================================================
- * Finite state machine management functions : chose code to execute */
-
-void switch_to_search_swimmer(void){
-	mode = 0;
-}
-
-void switch_to_go_to_swimmer(void){
-	mode = 1;
-}
-
-void init_before_switch(void){
-	mode = 5; // assign a value out of switch to make sure not to come back to another case
-}
-
-/* ================================================
- * Simple navigation functions*/
-
-void turn_left(int turn_count, int div){
-
-	int initial_count = left_motor_get_pos();
-
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-
-	while (abs(left_motor_get_pos() - initial_count) < turn_count){
-		right_motor_set_speed(+MOTOR_SPEED_LIMIT/div);
-		left_motor_set_speed(-MOTOR_SPEED_LIMIT/div);
-	}
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-}
-
-void turn_right(int turn_count, int div){
-
-	int initial_count = left_motor_get_pos();
-
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-
-	while (abs(left_motor_get_pos() - initial_count) < turn_count){
-		right_motor_set_speed(-MOTOR_SPEED_LIMIT/div);
-		left_motor_set_speed(+MOTOR_SPEED_LIMIT/div);
-	}
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-}
-
-void go_straight(float distance){
-
-	int initial_count = left_motor_get_pos();
-
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-
-	while (abs(left_motor_get_pos() - initial_count) < distance){
-		right_motor_set_speed(MOTOR_SPEED_LIMIT/4);
-		left_motor_set_speed(MOTOR_SPEED_LIMIT/4);
-	}
-	right_motor_set_speed(0);
-	left_motor_set_speed(0);
-}
-
-void clear_lake (void){
-	lake_scanned = 0;
-}
-
 
