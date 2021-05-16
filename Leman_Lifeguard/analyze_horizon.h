@@ -16,47 +16,48 @@
 /* =========================================================================== */
 
 /**
- * @brief Initializes the capture of images by the camera
+ * @brief 					Initializes the capture of images by the camera
  */
 void capture_image_start(void);
 
 /**
- * @brief Analyze information sent by the camera, detects shore and swimmers
+ * @brief 					Analyze information sent by the camera, detects shore and swimmers
  */
 void process_image_start(void);
 
 /* =========================================================================== */
 
 /**
- * @brief Forces to wait until the camera has finished capturing an image
+ * @brief 					Forces to wait until the camera has finished capturing an image
  */
 void wait_im_ready(void);
+
 
 /* Functions for image interpretation */
 /* =========================================================================== */
 
 /**
- * @brief Extracts the swimmer's width from the buffer
+ * @brief 					Extracts the swimmer's width from the buffer
  *
- * Returns the swimmer's width
- * Returns 0 if Swimmer not found
+ * Returns 					The swimmer's width
+ * 		 					0 if Swimmer not found
  */
 uint16_t extract_swimmer_width(uint8_t *buffer);
 
 /**
- * @brief Computes the position of the right shore in the buffer
+ * @brief 					Computes the position of the right shore in the buffer
  *
- * Returns 1 if the right extremity of the beach has been found
- * Returns 0 otherwise
+ * Returns 					1 if the right extremity of the beach has been found
+ * 							0 otherwise
  */
 _Bool extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red);
 
 
 /**
- * @brief Computes the position of the left shore in the buffer
+ * @brief 					Computes the position of the left shore in the buffer
  *
- * Returns 1 if the left extremity of the beach has been found
- * Returns 0 otherwise
+ * Returns 					1 if the left extremity of the beach has been found
+ *  						0 otherwise
  */
 _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red);
 
@@ -72,11 +73,11 @@ _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *b
 int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int i, int threshold);
 
 /**
-* @brief   Returns the mean of the send buffer
-* @param buffer      containing the value of the intensity of the color of each pixel of the buffer
+* @brief   					Returns the mean of the send buffer
+* @param buffer     		Containing the value of the intensity of the color of each pixel of the buffer
 *
 *
-* @return          the mean of the buffer
+* @return          			The mean of the buffer
 */
 uint32_t average_buffer(uint8_t *buffer);
 
@@ -85,32 +86,32 @@ uint32_t average_buffer(uint8_t *buffer);
 /* =========================================================================== */
 
 /**
-* @brief   Begin the search for the left shore (thus no search for swimmers)
+* @brief   					Begin the search for the left shore (thus no search for swimmers)
 */
 void search_left_shore(void);
 
 /**
-* @brief   Begin the search for the right shore (thus the search for swimmers continue)
+* @brief   					Begin the search for the right shore (thus search for swimmers continues)
 */
 void search_right_shore(void);
 
 /**
-* @brief   Stop searching shores
+* @brief   					Stop searching shores
 */
 void clear_shore(void);
 
 /**
-* @brief   Puts to true the analyzing static variable, thus starting the search of swimmers
+* @brief   					Puts to true the analyzing static variable (thus starting the search of swimmers)
 */
 void start_analyzing (void);
 
 /**
-* @brief   Puts to false the analyzing static variable, thus stopping the search of swimmers
+* @brief   					Puts to false the analyzing static variable (thus stopping the search of swimmers)
 */
 void stop_analyzing (void);
 
 /**
- * @brief Forces back the shore values to zero
+ * @brief 					Forces back the shore values to zero
  */
 void reset_shore(void);
 
@@ -119,51 +120,51 @@ void reset_shore(void);
 /* =========================================================================== */
 
 /**
- * @brief distance is modified by the capture image thread
+ * @brief 					Distance modified by the capture image thread
  *
- * Note: the distance is deduced from the size of the ball in the buffer
+ * Note: 					Distance deduced from the size of the ball in the buffer
  */
 float get_distance_cm(void);
 
 /**
-* @brief   Returns the last swimmer width value
+* @brief   					Returns the last swimmer width value
 *
-* @return  Last swimmer width value measured in pixels
+* @return  					Last swimmer width value measured in pixels
 */
 uint16_t get_swimmer_width(void);
 
 /**
-* @brief   Returns the last swimmer position value
+* @brief  					Returns the last swimmer position value
 *
-* @return  Last swimmer position value measured in pixels
+* @return  					Last swimmer position value measured in pixels
 */
 uint16_t get_swimmer_position(void);
 
 /**
-* @brief   Returns the last left shore position value
+* @brief   					Returns the last left shore position value
 *
-* @return  Last left shore position value measured in pixels
+* @return  					Last left shore position value measured in pixels
 */
 uint16_t get_left_shore_position(void);
 
 /**
-* @brief   Returns the last right shore position value
+* @brief   					Returns the last right shore position value
 *
-* @return  Last right shore position value measured in pixels
+* @return  					Last right shore position value measured in pixels
 */
 uint16_t get_right_shore_position(void);
 
 /**
-* @brief   Tells if the left shore has been found
+* @brief   					Tells if the left shore has been found
 *
-* @return  Returns 1 if the left shore has been found, 0 otherwise
+* @return  					Returns 1 if the left shore has been found, 0 otherwise
 */
 _Bool get_left_shore(void);
 
 /**
-* @brief   Tells if the right shore has been found
+* @brief   					Tells if the right shore has been found
 *
-* @return  Returns 1 if the right shore has been found, 0 otherwise
+* @return  					Returns 1 if the right shore has been found, 0 otherwise
 */
 _Bool get_right_shore(void);
 
