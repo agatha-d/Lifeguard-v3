@@ -10,10 +10,6 @@
 #include <string.h>
 #include <math.h>
 
-#include "ch.h"
-#include "hal.h"
-#include "memory_protection.h"
-
 #include <usbcfg.h>
 #include <motors.h>
 #include <camera/po8030.h>
@@ -31,6 +27,10 @@
 #include <navigation.h>
 #include <sensors/proximity.h>
 
+#include "ch.h"
+#include "hal.h"
+#include "memory_protection.h"
+
 /* ======================================= */
 
 messagebus_t bus;
@@ -39,11 +39,11 @@ CONDVAR_DECL(bus_condvar);
 
 
 // Optional : To use only chen calibrating camera settings
-/*void SendUint8ToComputer(uint8_t* data, uint16_t size) {
+void SendUint8ToComputer(uint8_t* data, uint16_t size) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}*/
+}
 
 static void serial_start(void) {
 	static SerialConfig ser_cfg = {
@@ -89,6 +89,7 @@ int main(void){
     // Initialization of threads for finite state machine
     capture_image_start();
     process_image_start();
+    /*
     search_swimmer_start();
     go_to_swimmer_start();
 
@@ -144,6 +145,7 @@ int main(void){
 		}
     }
 
+*/
     /* Infinite loop. */
     while (1) {
     	//waits 1 second

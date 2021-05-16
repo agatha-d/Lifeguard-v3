@@ -1,7 +1,4 @@
 #include <math.h>
-
-#include "ch.h"
-#include "hal.h"
 #include <chprintf.h>
 #include <usbcfg.h>
 #include <camera/po8030.h>
@@ -9,6 +6,9 @@
 
 #include <main.h>
 #include <analyze_horizon.h>
+
+#include "ch.h"
+#include "hal.h"
 
 
 /* Declaration of static variables */ //REDUIRE LEUR NOMBRE
@@ -78,7 +78,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 	uint16_t SwimmerWidth = 0;
 
-	//_Bool send_to_computer = true; // Optional : for calibrating camera
+	_Bool send_to_computer = true; // Optional : for calibrating camera
 
 	while(1){
 
@@ -92,7 +92,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 			/* Separate RGB values for each pixel
 			 * The MSB for the three colors are aligned on the bit 6
-		 * Big endian format
+			 * Big endian format
 			 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
 			 * Next pixel = img_buff_pointer[i+2]
 			 */
@@ -107,23 +107,23 @@ static THD_FUNCTION(ProcessImage, arg) {
 			}
 
 			//Smoothing the signal to reduce noise with moving average
-			for(uint16_t i = 0; i<=IMAGE_BUFFER_SIZE - MOVING_AVERAGE_WINDOW ; i++)//il y avait k avant
+			for(uint16_t i = 0; i<IMAGE_BUFFER_SIZE - 2*MOVING_AVERAGE_WINDOW ; i++)
 			{
-				/*tmp = 0;
-				for(uint16_t j = 0 ; j<MOVING_AVERAGE_WINDOW ; j++){
+				tmp = 0;
+				for(uint16_t j = 0 ; j<2*MOVING_AVERAGE_WINDOW ; j++){
 					tmp = tmp + im_diff_red[i+j];
 				}
-				im_diff_red_smooth[i] = tmp/MOVING_AVERAGE_WINDOW;*/
+				im_diff_red_smooth[i] = tmp/(2*MOVING_AVERAGE_WINDOW);
 
 
-				im_diff_red_smooth[i] = (im_diff_red[i]+im_diff_red[i+1]+im_diff_red[i+2]
+				/*im_diff_red_smooth[i] = (im_diff_red[i] + im_diff_red[i+1] + im_diff_red[i+2]
 										+ im_diff_red[i+3] + im_diff_red[i+4]
 										+ im_diff_red[i+5] + im_diff_red[i+6]
 										+ im_diff_red[i+7] + im_diff_red[i+8]
-										+ im_diff_red[i+9])/10;
+										+ im_diff_red[i+9])/10;*/
 			}
 
-			for(uint16_t i = IMAGE_BUFFER_SIZE-MOVING_AVERAGE_WINDOW+1; i<IMAGE_BUFFER_SIZE ; i++) {
+			for(uint16_t i = IMAGE_BUFFER_SIZE-2*MOVING_AVERAGE_WINDOW; i<IMAGE_BUFFER_SIZE ; i++) {
 				im_diff_red_smooth[i] = im_diff_red[i]; // extremities of the buffer
 			}
 
@@ -153,13 +153,12 @@ static THD_FUNCTION(ProcessImage, arg) {
 			}
 
 			// Optional : use to calibrate camera settings
-			/*if(send_to_computer){
-
+			if(send_to_computer){
 				//sends to the computer the image
-				SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
-			}*/
+				SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE);
+			}
 			//invert the bool : only shows 1 image out of 2
-			//send_to_computer = !send_to_computer;
+			send_to_computer = !send_to_computer;
 		}
 	}
 }

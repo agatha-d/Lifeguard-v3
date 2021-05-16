@@ -1,4 +1,3 @@
-#include "ch.h
 #include <math.h>
 
 #include <chprintf.h>
@@ -10,6 +9,8 @@
 #include <main.h>
 #include <navigation.h>
 #include <analyze_horizon.h>
+
+#include "ch.h"
 
 /* ======================================= */
 
