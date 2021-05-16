@@ -252,19 +252,18 @@ void bring_swimmer_to_beach(void){
 
 	turn_left(HALF_TURN_COUNT, 4);//capture the swimmer with de buoy
 
-	while(get_prox(IR8) > IR_THRESHOLD) {
+	while(get_prox(IR1) > IR_THRESHOLD) {
 		messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));
 	}
 
     do{
-    	  right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
-		  left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
+    	  right_motor_set_speed(MOTOR_SPEED_LIMIT);
+		  left_motor_set_speed(MOTOR_SPEED_LIMIT);
 		  messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));
-    } while (get_prox(IR8) < IR_THRESHOLD);
+    } while (get_prox(IR1) < IR_THRESHOLD);
 
    	turn_right(HALF_TURN_COUNT, 8); //liberates the swimmer
    	go_straight(MOVE_AWAY);
-
 }
 
 void halt_robot(void){

@@ -88,7 +88,7 @@ int main(void){
     // Initialization of threads for finite state machine
     capture_image_start();
     process_image_start();
-    /*
+
     search_swimmer_start();
     go_to_swimmer_start();
 
@@ -110,7 +110,7 @@ int main(void){
 						state = BEGIN_RESCUE;
 					}
 				}
-				clear_ready_to_save();//=>ici c après les chgmt de state<=
+				clear_ready_to_save();
 				break;
 
 			case BEGIN_RESCUE: // Go to swimmer
@@ -144,7 +144,6 @@ int main(void){
 		}
     }
 
-*/
     /* Infinite loop. */
     while (1) {
     	//waits 1 second

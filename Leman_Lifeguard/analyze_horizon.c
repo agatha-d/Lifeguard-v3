@@ -73,7 +73,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 	uint8_t im_diff_red[IMAGE_BUFFER_SIZE]        = {0}; // 2*red - blue - green
 	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
 
-	int8_t tmp            = 0;
+	int16_t tmp            = 0;
+	uint16_t j = 0;
 
 	uint16_t SwimmerWidth = 0;
 
@@ -106,23 +107,17 @@ static THD_FUNCTION(ProcessImage, arg) {
 			}
 
 			//Smoothing the signal to reduce noise with moving average
-			for(uint16_t i = 0; i<IMAGE_BUFFER_SIZE - 2*MOVING_AVERAGE_WINDOW ; i++)
+			for(uint16_t i = 0; i<IMAGE_BUFFER_SIZE - MOVING_AVERAGE_WINDOW ; i++)
 			{
+				j=0;
 				tmp = 0;
-				for(uint16_t j = 0 ; j<2*MOVING_AVERAGE_WINDOW ; j++){
+				for(j = 0 ; j<MOVING_AVERAGE_WINDOW ; j++){
 					tmp = tmp + im_diff_red[i+j];
 				}
-				im_diff_red_smooth[i] = tmp/(2*MOVING_AVERAGE_WINDOW);
-
-
-				/*im_diff_red_smooth[i] = (im_diff_red[i] + im_diff_red[i+1] + im_diff_red[i+2]
-										+ im_diff_red[i+3] + im_diff_red[i+4]
-										+ im_diff_red[i+5] + im_diff_red[i+6]
-										+ im_diff_red[i+7] + im_diff_red[i+8]
-										+ im_diff_red[i+9])/10;*/
+				im_diff_red_smooth[i] = tmp/(MOVING_AVERAGE_WINDOW);
 			}
 
-			for(uint16_t i = IMAGE_BUFFER_SIZE-2*MOVING_AVERAGE_WINDOW; i<IMAGE_BUFFER_SIZE ; i++) {
+			for(uint16_t i = IMAGE_BUFFER_SIZE-MOVING_AVERAGE_WINDOW; i<IMAGE_BUFFER_SIZE ; i++) {
 				im_diff_red_smooth[i] = im_diff_red[i]; // extremities of the buffer
 			}
 
