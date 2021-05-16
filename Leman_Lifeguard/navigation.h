@@ -1,3 +1,13 @@
+/* File :				navigation, part of project Leman_Lifeguard
+ *
+ * Description			Controls the movement of the e-puck in its environment
+ *
+ * Authors : 			Agatha Duranceau and Roxane Mérat
+ * Last modified : 		05/16/2021 at 9pm
+ *
+ * Adapted from TP4_CamReg, pi_regulator.h code given in the MICRO-315 class
+ */
+
 #ifndef PI_REGULATOR_H
 #define PI_REGULATOR_H
 

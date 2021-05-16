@@ -1,8 +1,13 @@
 /* File :				Leman_Lifeguard
+ *
+ * Description			This project, done as part of the embedded systems and robotics course,
+ * 						simulates a lifeguard (the e-puck) fetching swimmers in peril (red balls)
+ * 						in Lake Leman and brings them back to the beach.
+ *
+ * 						The main fucntion controls the different steps of the rescue.
+ *
  * Authors : 			Agatha Duranceau and Roxane Mérat
  * Last modified : 		05/16/2021 at 9pm
- *
- * Adapted from TP4_CamReg, code given in the MICRO-315 class
  */
 
 #include "ch.h"

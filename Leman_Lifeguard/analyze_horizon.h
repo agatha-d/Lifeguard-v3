@@ -1,3 +1,14 @@
+/* File :				analyze-horizon, part of project Leman_Lifeguard
+ *
+ * Description			Communication with the camera and interpretation of images
+ * 						Detection of swimmers and borders of the lake
+ *
+ * Authors : 			Agatha Duranceau and Roxane Mérat
+ * Last modified : 		05/16/2021 at 9pm
+ *
+ * Adapted from TP4_CamReg, process_image.h code given in the MICRO-315 class
+ */
+
 #ifndef PROCESS_IMAGE_H
 #define PROCESS_IMAGE_H
 
