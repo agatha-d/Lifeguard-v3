@@ -1,23 +1,22 @@
-#include "ch.h"
+#include "ch.h
+#include <math.h>
 
 #include <chprintf.h>
 #include <chthreads.h>
 #include <sensors/proximity.h>
-#include <math.h>
-#include <main.h>
 #include <motors.h>
 #include <leds.h>
+
+#include <main.h>
 #include <navigation.h>
 #include <analyze_horizon.h>
-#include <victory.h>
-#include <sensors/proximity.h>
 
 /* ======================================= */
 
-static _Bool empty_lake = 0;
-static _Bool lake_scanned = 0;
+static _Bool empty_lake    = 0;
+static _Bool lake_scanned  = 0;
 static _Bool ready_to_save = 0;
-static int mode = MOTIONLESS_STATE;
+static int mode            = MOTIONLESS_STATE;
 
 //simple PI regulator implementation
 int16_t crawl_to_swimmer(float distance, float goal){
@@ -84,7 +83,7 @@ static THD_FUNCTION(GoToSwimmer, arg) {
 			right_motor_set_speed(speed - ROT_KP * speed_correction);
 			left_motor_set_speed(speed + ROT_KP * speed_correction);
 
-			// when close enough and aligned, sprint using now the IR sensors to detect the ball
+			// when close enough and aligned, sprint using the IR sensors until close enough to catch the ball
 			if((speed_correction == FALSE) && (get_distance_cm() <= (GOAL_DISTANCE + MARGIN)))
 			{
 				while (get_prox(IR1) < BUOY_SIZE){
@@ -122,7 +121,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     		wait_im_ready();
     		search_left_shore();
 
-    		while (!get_left_shore()){// Turns left until shore in sight
+    		while (!get_left_shore()){ // Turns left until left shore in sight
     			wait_im_ready();
     			swimmer_found = 0;
     			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
@@ -251,7 +250,7 @@ void bring_swimmer_to_beach(void){
 	messagebus_topic_t *prox_topic = messagebus_find_topic_blocking(&bus, "/proximity");
 	proximity_msg_t prox_values;
 
-	turn_left(HALF_TURN_COUNT, 4);//capture the swimmer
+	turn_left(HALF_TURN_COUNT, 4);//capture the swimmer with de buoy
 
 	while(get_prox(IR8) > IR_THRESHOLD) {
 		messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));

@@ -25,7 +25,7 @@ extern "C" {
 #define FALSE					0
 
 //constants for the four states
-#define ANALYSING 				0
+#define ANALYZING 				0
 #define BEGIN_RESCUE 			1
 #define FINISH_RESCUE 			2
 #define VICTORY					3

@@ -1,11 +1,12 @@
+#include <math.h>
+
 #include "ch.h"
 #include "hal.h"
-
 #include <chprintf.h>
 #include <usbcfg.h>
-#include <math.h>
 #include <camera/po8030.h>
 #include <leds.h>
+
 #include <main.h>
 #include <analyze_horizon.h>
 
@@ -13,16 +14,19 @@
 /* Declaration of static variables */ //REDUIRE LEUR NOMBRE
 /* =========================================================================== */
 
-static float distance_cm = 0;
+static float distance_cm             = 0;
+
 static uint16_t swimmer_position     = IMAGE_BUFFER_SIZE/2;	//middle
 static uint16_t left_shore_position  = 0;
 static uint16_t right_shore_position = 0;
-static uint16_t width = 0;
-static _Bool swimmer     = 0;
-static _Bool left_shore  = 0;
-static _Bool right_shore = 0;
-static _Bool analyzing = 1;
-static int shore_to_search = 0;
+static uint16_t width                = 0;
+
+static _Bool swimmer                 = 0;
+static _Bool left_shore              = 0;
+static _Bool right_shore             = 0;
+static _Bool analyzing               = 1;
+
+static int shore_to_search           = 0;
 
 //semaphore
 static BSEMAPHORE_DECL(image_ready_sem, TRUE);
@@ -63,15 +67,18 @@ static THD_FUNCTION(ProcessImage, arg) {
 	(void)arg;
 
 	uint8_t *img_buff_ptr;
-	uint8_t imr[IMAGE_BUFFER_SIZE] = {0}; // store red values
-	uint8_t img[IMAGE_BUFFER_SIZE] = {0}; // store green values
-	uint8_t imb[IMAGE_BUFFER_SIZE] = {0}; // store blue values
+	uint8_t imr[IMAGE_BUFFER_SIZE]                = {0}; // store red values
+	uint8_t img[IMAGE_BUFFER_SIZE] 				  = {0}; // store green values
+	uint8_t imb[IMAGE_BUFFER_SIZE] 				  = {0}; // store blue values
+
 	uint8_t im_diff_red[IMAGE_BUFFER_SIZE]        = {0}; // 2*red - blue - green
 	uint8_t im_diff_red_smooth[IMAGE_BUFFER_SIZE] = {0};
-	int8_t tmp = 0;
+
+	int8_t tmp            = 0;
+
 	uint16_t SwimmerWidth = 0;
 
-	//_Bool send_to_computer = true;
+	//_Bool send_to_computer = true; // Optional : for calibrating camera
 
 	while(1){
 
@@ -91,8 +98,8 @@ static THD_FUNCTION(ProcessImage, arg) {
 			 */
 			for(uint16_t i = 0 ; i < (2 * IMAGE_BUFFER_SIZE) ; i+=2){
 
-				imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8) >> 2;
-				img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07) << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
+				imr[i/2] = ((uint8_t)img_buff_ptr[i]&0xF8)   >> 2;
+				img[i/2] = (((uint8_t)img_buff_ptr[i]&0x07)  << 3) | (((uint8_t)img_buff_ptr[i+1]&0xE0) >>5);
 				imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
 
 				// Creation of the buffer to recognise swimmers
@@ -121,7 +128,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 			}
 
 			for(uint16_t i = 0; i<IMAGE_BUFFER_SIZE ; i++){ // Transform swimmers into neat rectangles
-				if(im_diff_red_smooth[i] >RED_NOISE_THRESHOLD){
+				if(im_diff_red_smooth[i] > RED_NOISE_THRESHOLD){
 					im_diff_red_smooth[i] = PRESENCE_OF_RED;
 				}
 			}
@@ -145,6 +152,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 				distance_cm = PXTOCM/SwimmerWidth;
 			}
 
+			// Optional : use to calibrate camera settings
 			/*if(send_to_computer){
 
 				//sends to the computer the image
@@ -156,11 +164,25 @@ static THD_FUNCTION(ProcessImage, arg) {
 	}
 }
 
+//	Start of the threads
+/* =================================================*/
+
+void process_image_start(void){
+	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
+}
+
+void capture_image_start(void){
+	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
+}
+
+
+//	Extract information from image
+/* =================================================*/
 
 uint16_t extract_swimmer_width(uint8_t *buffer){
 
-	uint16_t i = 0, begin = 0, end = 0;
-	_Bool stop = 0, out = 0, end_of_buffer = 0;
+	uint16_t i    = 0, begin = 0, end           = 0;
+	_Bool stop    = 0, out   = 0, end_of_buffer = 0;
 	uint32_t mean = 0;
 
 	mean = average_buffer(buffer);
@@ -169,7 +191,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		while(stop == 0 && (i < (IMAGE_BUFFER_SIZE - WIDTH_SLOPE))) { //search for a begin = rise in color intensity
 			 if((buffer[i] > (mean+1)) && (buffer[i-WIDTH_SLOPE] <= mean)){
 				 begin = i;
-				 stop = 1;
+				 stop  = 1;
 			 }
 			 i++;
 		}
@@ -185,8 +207,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE){
 		    	if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] <= mean))
 		        {
-		        	end = i;
-		            stop = 1;
+		        	end     = i;
+		            stop    = 1;
 		            swimmer = 1;
 		        }
 		        i++;
@@ -198,10 +220,10 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		}
 
 		if(end && ((end-begin) < MIN_LINE_WIDTH)){//if a swimmer too small has been detected, ignore it
-			i = end;
-			begin = 0;
-			end = 0;
-			stop = 0;
+			i       = end;
+			begin   = 0;
+			end     = 0;
+			stop    = 0;
 			swimmer = 0;
 		}
 
@@ -227,8 +249,8 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 
 	if(!swimmer){
 		begin = 0;
-		end = 0;
-		width =0;
+		end   = 0;
+		width = 0;
 	}
 
 	if(swimmer){
@@ -237,18 +259,6 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 	}
 
 	return width; // width = 0 if no swimmer
-}
-
-
-//	Start of the threads
-/* =================================================*/
-
-void process_image_start(void){
-	chThdCreateStatic(waProcessImage, sizeof(waProcessImage), NORMALPRIO, ProcessImage, NULL);
-}
-
-void capture_image_start(void){
-	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
 
 
@@ -379,11 +389,14 @@ uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t
 	return 0; //=>possibilité d'enlever deux des variables statiques
 }
 
+//	Choose what to analyze
+/* =================================================*/
+
 void reset_shore(void){
 	right_shore = 0;
-	left_shore = 0;
+	left_shore  = 0;
 	right_shore_position = 0;
-	left_shore_position = 0;
+	left_shore_position  = 0;
 }
 
 void clear_shore(void){
@@ -405,6 +418,9 @@ void start_analyzing (void){
 void stop_analyzing (void){
 	analyzing = 0;
 }
+
+//	Return static variables
+/* =================================================*/
 
 float get_distance_cm(void){
 	return distance_cm;

@@ -1,18 +1,18 @@
-/* File : Leman_Lifeguard
- * Authors : Agatha Duranceau and Roxane Mérat
- * Last modified : 05/16/2021 at 1pm
+/* File :				Leman_Lifeguard
+ * Authors : 			Agatha Duranceau and Roxane Mérat
+ * Last modified : 		05/16/2021 at 1pm
+ *
  * Adapted from TP4_CamReg, code given in the MICRO-315 class
  */
-
-
-#include "ch.h"
-#include "hal.h"
-#include "memory_protection.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+
+#include "ch.h"
+#include "hal.h"
+#include "memory_protection.h"
 
 #include <usbcfg.h>
 #include <motors.h>
@@ -37,9 +37,9 @@ messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-/*
-// Est-ce nécessaire pour le programme final??
-void SendUint8ToComputer(uint8_t* data, uint16_t size) {
+
+// Optional : To use only chen calibrating camera settings
+/*void SendUint8ToComputer(uint8_t* data, uint16_t size) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
@@ -97,9 +97,9 @@ int main(void){
 
 	   switch(state) {
 
-			case ANALYSING: // Detect swimmers in peril
+			case ANALYZING: // Detect swimmers in peril
+
 				set_body_led(TRUE);
-				set_front_led(FALSE);
 				switch_to_search_swimmer();
 				if(get_lake_scanned()){
 					set_body_led(FALSE);
@@ -114,6 +114,7 @@ int main(void){
 				break;
 
 			case BEGIN_RESCUE: // Go to swimmer
+
 				switch_to_go_to_swimmer();
 				if(get_ready_to_save()){
 					state = FINISH_RESCUE;
@@ -121,22 +122,25 @@ int main(void){
 				break;
 
 			case FINISH_RESCUE: //Brings swimmer back to beach
+
 				init_before_switch(); // pause all threads
 				stop_analyzing();
 				bring_swimmer_to_beach();
 			   	clear_lake();
 			   	halt_robot();
 			   	start_analyzing();
-				state = ANALYSING;
+				state = ANALYZING;
 				break;
 
 			case VICTORY://No more swimmers in the lake
+
 				init_before_switch();
 				set_front_led(TRUE);
 				halt_robot();
 				playMelody(MARIO_FLAG, ML_SIMPLE_PLAY, NULL);
+				set_front_led(FALSE);
 				all_swimmers_saved = 1;
-				break;//pas besoin de break ici
+				break;
 		}
     }
 

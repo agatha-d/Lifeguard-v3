@@ -137,33 +137,43 @@ float get_distance_cm(void);
 /**
 * @brief   Returns the last swimmer width value
 *
-* @return          Last swimmer width value measured in pixels
+* @return  Last swimmer width value measured in pixels
 */
 uint16_t get_swimmer_width(void);
 
 /**
 * @brief   Returns the last swimmer position value
 *
-* @return          Last swimmer position value measured in pixels
+* @return  Last swimmer position value measured in pixels
 */
 uint16_t get_swimmer_position(void);
 
 /**
 * @brief   Returns the last left shore position value
 *
-* @return          Last left shore position value measured in pixels
+* @return  Last left shore position value measured in pixels
 */
 uint16_t get_left_shore_position(void);
 
 /**
 * @brief   Returns the last right shore position value
 *
-* @return          Last right shore position value measured in pixels
+* @return  Last right shore position value measured in pixels
 */
 uint16_t get_right_shore_position(void);
 
-//prob inutile ces deux prochaines fcts
+/**
+* @brief   Tells if the left shore has been found
+*
+* @return  Returns 1 if the left shore has been found, 0 otherwise
+*/
 _Bool get_left_shore(void);
+
+/**
+* @brief   Tells if the right shore has been found
+*
+* @return  Returns 1 if the right shore has been found, 0 otherwise
+*/
 _Bool get_right_shore(void);
 
 

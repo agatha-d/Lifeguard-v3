@@ -10,7 +10,8 @@
 #define ROTATION_THRESHOLD		10
 #define ROT_KP					0.5
 #define ERROR_THRESHOLD			1.0f
-#define IR_THRESHOLD			79//78
+
+#define IR_THRESHOLD			79
 #define IR8						7
 #define IR1						0
 #define HALF_TURN_COUNT			660 // For 180° turns
@@ -24,9 +25,9 @@
 //Mode of the final state machine:
 #define SEARCH_SWIMMER_STATE	0
 #define BEGIN_RESCUE_STATE		1
-#define MOTIONLESS_STATE		5//2 plutot non??
+#define MOTIONLESS_STATE		5
 
-
+// Start the threads
 /* ======================================= */
 
 /**
@@ -38,6 +39,27 @@ void search_swimmer_start(void);
 * @brief   			Initialize the thread that make the e-puck navigate toward a detected swimmer
 */
 void go_to_swimmer_start(void);
+
+// Motion functions
+/* ======================================= */
+
+/**
+* @brief   			Effects a left half turn to capture the swimmer, brings him near the beach
+* 					until the walls are detected by the IR, liberates him by making a right half turn,
+* 					then move away from him to better analyze it's environment
+*/
+void bring_swimmer_to_beach(void);
+
+/**
+* @brief   			Implements the PI to go to the ball
+* @param distance	Calculated in process image, in cm;
+* @param goal    	Constante of 5 cm
+* @return 			Speed in step/s
+*/
+int16_t crawl_to_swimmer(float distance, float goal);
+
+// Simple navigation functions
+/* ======================================= */
 
 /**
 * @brief   			Turn the robot to the right
@@ -60,24 +82,12 @@ void turn_left(int turn_count, int div);
 void go_straight(float distance);
 
 /**
-* @brief   			Effects a left half turn to capture the swimmer, brings him near the beach
-* 					until the walls are detected by the IR, liberates him by making a right half turn,
-* 					then move away from him to better analyze it's environment
-*/
-void bring_swimmer_to_beach(void);
-
-/**
-* @brief   			Implements the PI to go to the ball
-* @param distance	Calculated in process image, in cm;
-* @param goal    	Constante of 5 cm
-* @return 			Speed in step/s
-*/
-int16_t crawl_to_swimmer(float distance, float goal);
-
-/**
 * @brief   			Stops the robot
 */
 void halt_robot(void);
+
+// Return static variables
+/* ======================================= */
 
 /**
 * @brief   			Returns the state of the lake
@@ -102,6 +112,9 @@ _Bool get_empty_lake(void);
 * @return 			TRUE if the robot is close enough to catch the swimmer with a 180° rotation
 */
 _Bool get_ready_to_save(void);
+
+// Choose what to do
+/* ======================================= */
 
 /**
 * @brief   			Change the mode of the robot to not search or go to the swimmer
