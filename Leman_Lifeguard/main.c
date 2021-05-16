@@ -1,3 +1,10 @@
+/* File : Leman_Lifeguard
+ * Authors : Agatha Duranceau and Roxane Mérat
+ * Last modified : 05/16/2021 at 1pm
+ * Adapted from TP4_CamReg, code given in the MICRO-315 class
+ */
+
+
 #include "ch.h"
 #include "hal.h"
 #include "memory_protection.h"
@@ -10,7 +17,7 @@
 #include <usbcfg.h>
 #include <motors.h>
 #include <camera/po8030.h>
-#include <chprintf.h>
+#include <chprintf.h>//??//
 #include <msgbus/messagebus.h>
 #include <leds.h>
 
@@ -19,31 +26,26 @@
 #include <audio/play_sound_file.h>
 
 #include <main.h>
-
 #include <navigation.h>
 #include <analyze_horizon.h>
-#include <navigation.h>
-#include <victory.h>
+#include <navigation.h>//??//
+#include <victory.h>//???///
 #include <sensors/proximity.h>
 
 /* ======================================= */
-
-//Proximity captor : 10 -> 100 Hz ??? quoi ?
 
 messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
 // Est-ce nécessaire pour le programme final??
-void SendUint8ToComputer(uint8_t* data, uint16_t size) 
-{
+void SendUint8ToComputer(uint8_t* data, uint16_t size) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
 }
 
-static void serial_start(void)
-{
+static void serial_start(void) {
 	static SerialConfig ser_cfg = {
 	    115200,
 	    0,
@@ -54,8 +56,10 @@ static void serial_start(void)
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
-int main(void)
-{
+int main(void){
+
+	 _Bool all_swimmers_saved = 0;
+	 uint8_t state = 0;
 
     halInit();
     chSysInit();
@@ -67,131 +71,72 @@ int main(void)
     // Initialisation of peripherals
     serial_start();
     usb_start();
-
     dcmi_start(); //starts the camera
     po8030_start();
     po8030_set_ae(0); // disable auto exposure
     po8030_set_awb(0); // disable auto white balance
     po8030_set_rgb_gain(0x20, 0x20, 0x20); // same gain for every color
-
     dac_start();
     playMelodyStart();
-
     proximity_start(); //init the IR sensors
     calibrate_ir();
     motors_init();
 
-    clear_leds();
-    set_body_led(0);
-    set_front_led(0);
-
     // Make sure no random thread will start to execute
     init_before_switch();
 
-    // Initialisation of threads for finite state machine
+    // Initialization of threads for finite state machine
     capture_image_start();
     process_image_start();
-
     search_swimmer_start();
     go_to_swimmer_start();
+    start_analyzing();//=>on peut juste initialiser à 1 la variable analysing sinon<=
 
-    start_analyzing();
+   while(!all_swimmers_saved) { // Main loop for finite state machine management
 
-    // Main loop for finite state machine management
+	   switch(state) {
 
-    _Bool all_swimmers_saved = 0;
-     uint8_t state = 0;
-
-   while(!all_swimmers_saved)
-   {
-		switch(state) {
-
-			case ANALYSING: // Search for swimmer to save
-
-				set_body_led(1);
-
+			case ANALYSING: // Detect swimmers in peril
+				set_body_led(TRUE);
 				switch_to_search_swimmer();
-
 				if(get_lake_scanned()){
-
+					set_body_led(FALSE);
 					if(get_empty_lake()){	//if not swimmer found go to victory
 						state = VICTORY;
 					}
-
 					if(!get_empty_lake()){	//if swimmer found go to swimmer
 						state = BEGIN_RESCUE;
 					}
 				}
-				clear_ready_to_save();
+				clear_ready_to_save();//=>ici c après les chgmt de state<=
 				break;
 
 			case BEGIN_RESCUE: // Go to swimmer
-
-				set_body_led(0);
-
 				switch_to_go_to_swimmer();
-
 				if(get_ready_to_save()){
 					state = FINISH_RESCUE;
 				}
 				break;
 
-			case FINISH_RESCUE: //Save swimmer: brings swimmer back to beach
-
+			case FINISH_RESCUE: //Brings swimmer back to beach
 				init_before_switch(); // pause all threads
 				stop_analyzing();
-				// à faire dans une fonction
-
-				turn_left(HALF_TURN_COUNT, 4);
-
-				//go_straight(700);
-				//right_motor_set_speed(0);
-				//left_motor_set_speed(0);
-
-
-				//wait_prox_ready();
-
-			    do{
-					  right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
-					  left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
-					  wait_prox_ready();
-			    } while (get_prox(7) < 78);
-
-			   	turn_right(HALF_TURN_COUNT, 8);
-			   	go_straight(700);
-
+				bring_swimmer_to_beach();
 			   	clear_lake();
-
+			   	halt_robot();
 			   	start_analyzing();
-				state = 0;
-
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-
+				state = ANALYSING;
 				break;
 
-			case VICTORY:// Victory: no more swimmers in the lake
-
+			case VICTORY://No more swimmers in the lake
 				init_before_switch();
-
-				set_front_led(1);
-				set_body_led(0);
-
-				right_motor_set_speed(0);
-				left_motor_set_speed(0);
-
+				set_front_led(TRUE);
+				halt_robot();
 				playMelody(MARIO_FLAG, ML_SIMPLE_PLAY, NULL);
-
-				clear_leds();
-
 				all_swimmers_saved = 1;
-				break;
+				break;//pas besoin de break ici
 		}
     }
-
-    clear_leds();
-    set_body_led(0);
-
 
     /* Infinite loop. */
     while (1) {
@@ -203,7 +148,6 @@ int main(void)
 #define STACK_CHK_GUARD 0xe2dee396
 uintptr_t __stack_chk_guard = STACK_CHK_GUARD;
 
-void __stack_chk_fail(void)
-{
+void __stack_chk_fail(void){
     chSysHalt("Stack smashing detected");
 }
