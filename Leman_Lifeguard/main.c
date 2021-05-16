@@ -5,6 +5,10 @@
  * Adapted from TP4_CamReg, code given in the MICRO-315 class
  */
 
+#include "ch.h"
+#include "hal.h"
+#include "memory_protection.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,10 +17,10 @@
 #include <usbcfg.h>
 #include <motors.h>
 #include <camera/po8030.h>
-#include <chprintf.h>//??//
+#include <chprintf.h>
 #include <msgbus/messagebus.h>
 #include <leds.h>
-
+#include <sensors/proximity.h>
 #include <audio/audio_thread.h>
 #include <audio/play_melody.h>
 #include <audio/play_sound_file.h>
@@ -25,11 +29,6 @@
 #include <navigation.h>
 #include <analyze_horizon.h>
 #include <navigation.h>
-#include <sensors/proximity.h>
-
-#include "ch.h"
-#include "hal.h"
-#include "memory_protection.h"
 
 /* ======================================= */
 

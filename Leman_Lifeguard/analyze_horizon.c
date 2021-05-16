@@ -1,15 +1,14 @@
-#include <math.h>
+#include "ch.h"
+#include "hal.h"
+
 #include <chprintf.h>
 #include <usbcfg.h>
+#include <math.h>
 #include <camera/po8030.h>
 #include <leds.h>
 
 #include <main.h>
 #include <analyze_horizon.h>
-
-#include "ch.h"
-#include "hal.h"
-
 
 /* Declaration of static variables */ //REDUIRE LEUR NOMBRE
 /* =========================================================================== */

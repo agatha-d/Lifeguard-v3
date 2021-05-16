@@ -1,16 +1,15 @@
-#include <math.h>
+#include "ch.h"
 
 #include <chprintf.h>
 #include <chthreads.h>
 #include <sensors/proximity.h>
+#include <math.h>
 #include <motors.h>
 #include <leds.h>
 
 #include <main.h>
 #include <navigation.h>
 #include <analyze_horizon.h>
-
-#include "ch.h"
 
 /* ======================================= */
 
