@@ -332,59 +332,6 @@ _Bool extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *
 	return right_shore ;
 }
 
-//PROPOSITION DE FONCTION EXTRACT SHORE:
-uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red, int shore){//ex : RIGHT_SHORE
-
-	int8_t tmp = 0;
-	_Bool stop = 0;
-	uint16_t i = 0;
-	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
-
-	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-		/*tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
-		if (tmp <GREEN_NOISE_THRESHOLD){
-			tmp = 0;
-		}
-		im_diff[i] = tmp;*/
-
-
-		//plutot :
-		//im_diff[i] = difference(imr, imb, img, i, GREEN_NOISE_THRESHOLD);
-	}
-
-	stop = 0;
-	i = SHORE_WIDTH_SLOPE;
-
-	if(shore == RIGHT_SHORE){
-		right_shore_position = 0;
-		while((i < IMAGE_BUFFER_SIZE)&&(!stop)) {
-			if((im_diff[i]>0)&& (im_diff[i-SHORE_WIDTH_SLOPE]==0)) {
-				stop = 1;
-				right_shore_position = i;
-			}
-			i++;
-		}
-		return right_shore_position ;
-	}
-
-	if(shore == LEFT_SHORE){
-		left_shore_position = 0;
-		while((i < IMAGE_BUFFER_SIZE)&&(!stop))	{
-			if((im_diff[i]==0)&& (im_diff[i-SHORE_WIDTH_SLOPE]>0)){
-				stop = 1;
-				left_shore_position = i;
-			}
-			i++;
-		}
-		return left_shore_position ;
-	}
-
-	return 0; //=>possibilité d'enlever deux des variables statiques
-}
-
-//	Choose what to analyze
-/* =================================================*/
-
 void reset_shore(void){
 	right_shore = 0;
 	left_shore  = 0;

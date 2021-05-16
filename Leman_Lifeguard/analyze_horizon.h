@@ -28,7 +28,6 @@ void process_image_start(void);
  */
 void wait_im_ready(void);
 
-
 /* Functions for image interpretation */
 /* =========================================================================== */
 
@@ -56,19 +55,6 @@ _Bool extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *
  * Returns 0 otherwise
  */
 _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red);
-
-
-//test fonction:
-
-/**
- * @brief   Returns the position of the demanded shore
- *
- * @param buffer    	imb, img, imr
- * @param shore     	RIGHT_SHORE or LEFT_SHORE
- *
- * @return				The position in pixel of the demanded shore
- */
-uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red, int shore);
 
 /**
  * @brief   				Returns a value containing informations about the presence of a desired
