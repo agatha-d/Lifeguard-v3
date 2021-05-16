@@ -28,8 +28,7 @@
 #include <main.h>
 #include <navigation.h>
 #include <analyze_horizon.h>
-#include <navigation.h>//??//
-#include <victory.h>//???///
+#include <navigation.h>
 #include <sensors/proximity.h>
 
 /* ======================================= */
@@ -38,12 +37,13 @@ messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
+/*
 // Est-ce nécessaire pour le programme final??
 void SendUint8ToComputer(uint8_t* data, uint16_t size) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}
+}*/
 
 static void serial_start(void) {
 	static SerialConfig ser_cfg = {
@@ -65,11 +65,11 @@ int main(void){
     chSysInit();
     mpu_init();
 
-    // Init the Inter Process Communication bus.
+    // Initialization of the Inter Process Communication bus.
     messagebus_init(&bus, &bus_lock, &bus_condvar);
 
 
-    // Initialisation of peripherals
+    // Initialization of peripherals
     serial_start();
     usb_start();
     dcmi_start(); //starts the camera
@@ -89,11 +89,8 @@ int main(void){
     // Initialization of threads for finite state machine
     capture_image_start();
     process_image_start();
-
     search_swimmer_start();
-
     go_to_swimmer_start();
-    start_analyzing();//=>on peut juste initialiser à 1 la variable analysing sinon<=
 
 
    while(!all_swimmers_saved) { // Main loop for finite state machine management
@@ -102,6 +99,7 @@ int main(void){
 
 			case ANALYSING: // Detect swimmers in peril
 				set_body_led(TRUE);
+				set_front_led(FALSE);
 				switch_to_search_swimmer();
 				if(get_lake_scanned()){
 					set_body_led(FALSE);

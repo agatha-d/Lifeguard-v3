@@ -21,7 +21,7 @@ static uint16_t width = 0;
 static _Bool swimmer     = 0;
 static _Bool left_shore  = 0;
 static _Bool right_shore = 0;
-static _Bool analyzing = 0;
+static _Bool analyzing = 1;
 static int shore_to_search = 0;
 
 //semaphore
@@ -71,7 +71,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 	int8_t tmp = 0;
 	uint16_t SwimmerWidth = 0;
 
-	_Bool send_to_computer = true;
+	//_Bool send_to_computer = true;
 
 	while(1){
 
@@ -85,7 +85,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 			/* Separate RGB values for each pixel
 			 * The MSB for the three colors are aligned on the bit 6
-			 * Big endian format
+		 * Big endian format
 			 * img_buff_pointer of size 8, corresponds to 1 pixel RGB values
 			 * Next pixel = img_buff_pointer[i+2]
 			 */
@@ -96,25 +96,18 @@ static THD_FUNCTION(ProcessImage, arg) {
 				imb[i/2] = ((uint8_t)img_buff_ptr[i+1]&0x1F) << 1;
 
 				// Creation of the buffer to recognise swimmers
-				// Adapt signal to transform swimmers as neat rectangles
-
-				//plutot:
 				im_diff_red[i/2] = difference(imr, imb, img, i/2, RED_NOISE_THRESHOLD);
-
-				/*tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // cancel red in other areas than swimmer
-				if (tmp < RED_NOISE_THRESHOLD){
-					tmp = 0;
-				}
-				im_diff_red[i/2] = tmp;*/
 			}
 
 			//Smoothing the signal to reduce noise with moving average
 			for(uint16_t i = 0; i<=IMAGE_BUFFER_SIZE - MOVING_AVERAGE_WINDOW ; i++)//il y avait k avant
 			{
-				/*for(uint16_t j=0 ; j<MOVING_AVERAGE_WINDOW ; j++){
-					im_diff_red[i] += im_diff_red[i+j];
+				/*tmp = 0;
+				for(uint16_t j = 0 ; j<MOVING_AVERAGE_WINDOW ; j++){
+					tmp = tmp + im_diff_red[i+j];
 				}
-				im_diff_red_smooth[i] = im_diff_red[i]/MOVING_AVERAGE_WINDOW;*/
+				im_diff_red_smooth[i] = tmp/MOVING_AVERAGE_WINDOW;*/
+
 
 				im_diff_red_smooth[i] = (im_diff_red[i]+im_diff_red[i+1]+im_diff_red[i+2]
 										+ im_diff_red[i+3] + im_diff_red[i+4]
@@ -127,7 +120,7 @@ static THD_FUNCTION(ProcessImage, arg) {
 				im_diff_red_smooth[i] = im_diff_red[i]; // extremities of the buffer
 			}
 
-			for(uint16_t i = 0; i<IMAGE_BUFFER_SIZE ; i++){
+			for(uint16_t i = 0; i<IMAGE_BUFFER_SIZE ; i++){ // Transform swimmers into neat rectangles
 				if(im_diff_red_smooth[i] >RED_NOISE_THRESHOLD){
 					im_diff_red_smooth[i] = PRESENCE_OF_RED;
 				}
@@ -136,16 +129,15 @@ static THD_FUNCTION(ProcessImage, arg) {
 			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
 			if(shore_to_search == LEFT_SHORE){
-				left_shore_position =  test_extract_shore(imb, img, imr, LEFT_SHORE);
+				left_shore =  extract_left_shore(imb, img, imr);
 			} else {
-				left_shore_position = 0;
+				left_shore = FALSE;
 			}
 
 			if(shore_to_search == RIGHT_SHORE){
-				//right_shore = extract_right_shore(imb, img, imr);
-				right_shore_position = test_extract_shore(imb, img, imr, RIGHT_SHORE);
+				right_shore = extract_right_shore(imb, img, imr);
 			} else {
-				right_shore_position = 0;
+				right_shore = FALSE;
 			}
 
 			//converts the width into a distance between the robot and the camera
@@ -153,13 +145,13 @@ static THD_FUNCTION(ProcessImage, arg) {
 				distance_cm = PXTOCM/SwimmerWidth;
 			}
 
-			if(send_to_computer){//à enelever
+			/*if(send_to_computer){
 
 				//sends to the computer the image
 				SendUint8ToComputer(im_diff_red_smooth, IMAGE_BUFFER_SIZE); //Ne semble plus fonctionner après l'ajout des différetnes threads
-			}
+			}*/
 			//invert the bool : only shows 1 image out of 2
-			send_to_computer = !send_to_computer;
+			//send_to_computer = !send_to_computer;
 		}
 	}
 }
@@ -167,9 +159,9 @@ static THD_FUNCTION(ProcessImage, arg) {
 
 uint16_t extract_swimmer_width(uint8_t *buffer){
 
-	uint16_t i = 0, begin = 0, end = 0; //mean = 0;
+	uint16_t i = 0, begin = 0, end = 0;
 	_Bool stop = 0, out = 0, end_of_buffer = 0;
-	uint32_t mean = 0;//pas besoin d'être un 32 si??
+	uint32_t mean = 0;
 
 	mean = average_buffer(buffer);
 
@@ -191,7 +183,7 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		    stop = 0;
 		    
 		    while(stop == 0 && i < IMAGE_BUFFER_SIZE){
-		    	if((buffer[i] > (mean+1))  && (buffer[i+WIDTH_SLOPE] <= mean)) // et si=mean+1?
+		    	if((buffer[i] > mean)  && (buffer[i+WIDTH_SLOPE] <= mean))
 		        {
 		        	end = i;
 		            stop = 1;
@@ -200,12 +192,12 @@ uint16_t extract_swimmer_width(uint8_t *buffer){
 		        i++;
 		    }
 
-		    if (!end) { //if no end was not found, end of search
+		    if (!end) { //if no end was not found, no swimmer
 		        swimmer = 0;
 		    }
 		}
 
-		if(end && ((end-begin) < MIN_LINE_WIDTH)){//40 pixel = MIN8LINE_WIDTH ->on est sure de nous? C bcp quand même
+		if(end && ((end-begin) < MIN_LINE_WIDTH)){//if a swimmer too small has been detected, ignore it
 			i = end;
 			begin = 0;
 			end = 0;
@@ -259,6 +251,7 @@ void capture_image_start(void){
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
 
+
 uint32_t average_buffer(uint8_t *buffer){
 
 	uint32_t mean = 0;
@@ -285,18 +278,12 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 
 _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
-	int8_t tmp = 0;
 	_Bool stop = 0;
 	uint16_t i = 0;
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
 
-
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
-		if (tmp <GREEN_NOISE_THRESHOLD){
-			tmp = 0;
-		}
-		im_diff[i] = tmp;//= a un nb >4 quand dans le vert, à 0 dans le bleu
+		im_diff[i] = difference(buffer_green, buffer_blue, buffer_red, i, GREEN_NOISE_THRESHOLD);
 	}
 
 	left_shore = 0;
@@ -317,20 +304,14 @@ _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *b
 
 _Bool extract_right_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red){
 
-	int8_t tmp = 0;
 	_Bool stop = 0;
 	uint16_t i = 0;
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
 
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-
-		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];//qd grand = il y a du vert
-		if (tmp <GREEN_NOISE_THRESHOLD){
-			tmp = 0;
-		}
-		im_diff[i] = tmp;
-	}//jusqu'à là, les deux fonctions sont exactement identiques
+		im_diff[i] = difference(buffer_green, buffer_blue, buffer_red, i, GREEN_NOISE_THRESHOLD);
+	}
 
 	right_shore = 0;
 	stop = 0;
@@ -363,7 +344,9 @@ uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t
 		}
 		im_diff[i] = tmp;*/
 
-		im_diff[i] = difference(buffer_green, buffer_red, buffer_blue, i, GREEN_NOISE_THRESHOLD);
+
+		//plutot :
+		//im_diff[i] = difference(imr, imb, img, i, GREEN_NOISE_THRESHOLD);
 	}
 
 	stop = 0;
@@ -380,8 +363,6 @@ uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t
 		}
 		return right_shore_position ;
 	}
-
-
 
 	if(shore == LEFT_SHORE){
 		left_shore_position = 0;

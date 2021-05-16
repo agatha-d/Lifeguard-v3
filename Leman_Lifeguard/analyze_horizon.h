@@ -63,13 +63,21 @@ _Bool extract_left_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *b
 /**
  * @brief   Returns the position of the demanded shore
  *
- * @param buffer     imb, img, imr
- * @param shore      RIGHT_SHORE or LEFT_SHORE
+ * @param buffer    	imb, img, imr
+ * @param shore     	RIGHT_SHORE or LEFT_SHORE
  *
- * @return          The position in pixel of the demanded shore
+ * @return				The position in pixel of the demanded shore
  */
 uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t *buffer_red, int shore);
 
+/**
+ * @brief   				Returns a value containing informations about the presence of a desired color in the pixel number i
+ * @param buffer_diff   	Buffer containing the color we want to analyze
+ * @param buffer1 & buffer2	Buffer containing the color we don't want to analyze
+ * @param i     			Value of the pixel analyzed
+ * @param threshold     	Value under which we considered that there is not the desired color
+ * @return          		The position in pixel of the demanded shore
+ */
 int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int i, int threshold);
 
 /**
