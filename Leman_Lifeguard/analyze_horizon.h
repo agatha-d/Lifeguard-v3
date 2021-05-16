@@ -16,9 +16,13 @@
 /* =========================================================================== */
 
 /**
- * @brief Initialises the capture of images by the camera
+ * @brief Initializes the capture of images by the camera
  */
 void capture_image_start(void);
+
+/**
+ * @brief Analyze information sent by the camera, detects shore and swimmers
+ */
 void process_image_start(void);
 
 /* =========================================================================== */

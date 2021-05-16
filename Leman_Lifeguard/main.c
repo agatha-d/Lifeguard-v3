@@ -36,13 +36,13 @@ messagebus_t bus;
 MUTEX_DECL(bus_lock);
 CONDVAR_DECL(bus_condvar);
 
-
-// Optional : To use only chen calibrating camera settings
+// Optional : To use only when calibrating camera settings
+/*
 void SendUint8ToComputer(uint8_t* data, uint16_t size) {
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)"START", 5);
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)&size, sizeof(uint16_t));
 	chSequentialStreamWrite((BaseSequentialStream *)&SD3, (uint8_t*)data, size);
-}
+}*/
 
 static void serial_start(void) {
 	static SerialConfig ser_cfg = {
@@ -51,14 +51,13 @@ static void serial_start(void) {
 	    0,
 	    0,
 	};
-
 	sdStart(&SD3, &ser_cfg); // UART3.
 }
 
 int main(void){
 
-	 _Bool all_swimmers_saved = 0;
-	 uint8_t state = 0;
+	 _Bool all_swimmers_saved 	= 0;
+	 uint8_t state 				= 0;
 
     halInit();
     chSysInit();
@@ -78,7 +77,7 @@ int main(void){
     po8030_set_rgb_gain(0x20, 0x20, 0x20); // same gain for every color
     dac_start();
     playMelodyStart();
-    proximity_start(); //init the IR sensors
+    proximity_start();
     calibrate_ir();
     motors_init();
 
@@ -93,9 +92,9 @@ int main(void){
     go_to_swimmer_start();
 
 
-   while(!all_swimmers_saved) { // Main loop for finite state machine management
+    while(!all_swimmers_saved) { // Main loop for finite state machine management
 
-	   switch(state) {
+	   switch(state){
 
 			case ANALYZING: // Detect swimmers in peril
 
@@ -103,7 +102,7 @@ int main(void){
 				switch_to_search_swimmer();
 				if(get_lake_scanned()){
 					set_body_led(FALSE);
-					if(get_empty_lake()){	//if not swimmer found go to victory
+					if(get_empty_lake()){	//if no swimmer found go to victory
 						state = VICTORY;
 					}
 					if(!get_empty_lake()){	//if swimmer found go to swimmer
@@ -126,7 +125,7 @@ int main(void){
 				init_before_switch(); // pause all threads
 				stop_analyzing();
 				bring_swimmer_to_beach();
-			   	clear_lake();
+			   	clear_lake();//reinitialize lake state
 			   	halt_robot();
 			   	start_analyzing();
 				state = ANALYZING;
