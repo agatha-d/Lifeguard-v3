@@ -129,7 +129,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     		wait_im_ready();
     		search_left_shore();
 
-    		while (!get_left_shore()){// Turns left until finds left shore
+    		while (!get_left_shore_position()){// Turns left until finds left shore
     			wait_im_ready();
     			swimmer_found = 0;
     			right_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
@@ -139,7 +139,7 @@ static THD_FUNCTION(SearchSwimmer, arg) {
     		halt_robot();
     		wait_im_ready();
 
-			if(swimmer_found && get_left_shore()){//Musn't detect swimmers on beach
+			if(swimmer_found && get_left_shore_position()){//Musn't detect swimmers on beach
 				if((get_swimmer_position() <= get_left_shore_position()) ||
 					(abs(get_swimmer_position() - get_left_shore_position()) < 50)){
 					swimmer_found = 0;
@@ -147,21 +147,22 @@ static THD_FUNCTION(SearchSwimmer, arg) {
 			}
 
 			search_right_shore();
+			halt_robot();
 
 			/* Turns right until finds a swimmer or the right shore
 			 * Stops as soon as the shore line enters its field of view
 			 * -> swimmers already on the beach cannot be seen
 			 */
-			while((!swimmer_found) && (!get_right_shore())){
+			while((!swimmer_found) && (!get_right_shore_position())){
 				wait_im_ready();
 				right_motor_set_speed(- MOTOR_SPEED_LIMIT/12);
 				left_motor_set_speed(+ MOTOR_SPEED_LIMIT/12);
 				swimmer_found = get_swimmer_width();
 			}
 
-			if(swimmer_found && get_right_shore()){
+			if(swimmer_found && get_right_shore_position()){
 				if((get_swimmer_position() >= get_right_shore_position())  ||
-							(abs(get_swimmer_position() - get_left_shore_position()) < 50)){
+							(abs(get_swimmer_position() - get_right_shore_position()) < 50)){//attention : magic number
 					swimmer_found = 0;
 				}
 			}
@@ -260,15 +261,19 @@ void clear_lake (void){
 
 void bring_swimmer_to_beach(void){
 
-	turn_left(HALF_TURN_COUNT, 4);
 	messagebus_topic_t *prox_topic = messagebus_find_topic_blocking(&bus, "/proximity");
 	proximity_msg_t prox_values;
+
+	turn_left(HALF_TURN_COUNT, 4);
+
+
+	messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));
 
     do{
 		  right_motor_set_speed(MOTOR_SPEED_LIMIT/2);
 		  left_motor_set_speed(MOTOR_SPEED_LIMIT/2);
-		 // wait_prox_ready();
-		  messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));
+		 wait_prox_ready();
+		 // messagebus_topic_wait(prox_topic, &prox_values, sizeof(prox_values));
 
     } while (get_prox(IR8) < IR_THRESHOLD);
 

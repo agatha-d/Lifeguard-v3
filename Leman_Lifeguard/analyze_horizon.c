@@ -99,22 +99,22 @@ static THD_FUNCTION(ProcessImage, arg) {
 				// Adapt signal to transform swimmers as neat rectangles
 
 				//plutot:
-				//im_diff_red[i/2] = difference(imr, imb, img, i/2, RED_NOISE_THRESHOLD);
+				im_diff_red[i/2] = difference(imr, imb, img, i/2, RED_NOISE_THRESHOLD);
 
-				tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // cancel red in other areas than swimmer
+				/*tmp = 2*imr[i/2] - imb[i/2] -img[i/2]; // cancel red in other areas than swimmer
 				if (tmp < RED_NOISE_THRESHOLD){
 					tmp = 0;
 				}
-				im_diff_red[i/2] = tmp;
+				im_diff_red[i/2] = tmp;*/
 			}
 
 			//Smoothing the signal to reduce noise with moving average
 			for(uint16_t i = 0; i<=IMAGE_BUFFER_SIZE - MOVING_AVERAGE_WINDOW ; i++)//il y avait k avant
 			{
-				/*for(int j=0 ; j<MOVING_AVERAGE_WINDOW ; j++){
-					im_diff_red_smooth[i] += im_diff_red[i+j];
+				/*for(uint16_t j=0 ; j<MOVING_AVERAGE_WINDOW ; j++){
+					im_diff_red[i] += im_diff_red[i+j];
 				}
-				im_diff_red_smooth[i] = im_diff_red_smooth[i]/MOVING_AVERAGE_WINDOW;*/
+				im_diff_red_smooth[i] = im_diff_red[i]/MOVING_AVERAGE_WINDOW;*/
 
 				im_diff_red_smooth[i] = (im_diff_red[i]+im_diff_red[i+1]+im_diff_red[i+2]
 										+ im_diff_red[i+3] + im_diff_red[i+4]
@@ -136,15 +136,16 @@ static THD_FUNCTION(ProcessImage, arg) {
 			SwimmerWidth = extract_swimmer_width(im_diff_red_smooth);
 
 			if(shore_to_search == LEFT_SHORE){
-				left_shore =  extract_left_shore(imb, img, imr);
+				left_shore_position =  test_extract_shore(imb, img, imr, LEFT_SHORE);
 			} else {
-				left_shore = 0;
+				left_shore_position = 0;
 			}
 
 			if(shore_to_search == RIGHT_SHORE){
-				right_shore = extract_right_shore(imb, img, imr);
+				//right_shore = extract_right_shore(imb, img, imr);
+				right_shore_position = test_extract_shore(imb, img, imr, RIGHT_SHORE);
 			} else {
-				right_shore = 0;
+				right_shore_position = 0;
 			}
 
 			//converts the width into a distance between the robot and the camera
@@ -258,8 +259,7 @@ void capture_image_start(void){
 	chThdCreateStatic(waCaptureImage, sizeof(waCaptureImage), NORMALPRIO, CaptureImage, NULL);
 }
 
-
-uint32_t average_buffer(uint8_t *buffer){//encore une fois, 32 semble bcp
+uint32_t average_buffer(uint8_t *buffer){
 
 	uint32_t mean = 0;
 
@@ -275,7 +275,7 @@ int8_t difference(uint8_t *buffer_diff, uint8_t *buffer1, uint8_t *buffer2, int 
 
 	int8_t tmp = 0;
 
-	tmp = 2*buffer_diff[i] - buffer1[i] -buffer2[i/2];
+	tmp = 2*buffer_diff[i] - buffer1[i] -buffer2[i];
 	if (tmp <threshold){
 		tmp = 0;
 	}
@@ -357,15 +357,13 @@ uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t
 	uint8_t im_diff[IMAGE_BUFFER_SIZE] = {0};
 
 	for(i = 0 ; i < IMAGE_BUFFER_SIZE ; i++){
-		tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
+		/*tmp = 2*buffer_green[i] - buffer_red[i] - buffer_blue[i];
 		if (tmp <GREEN_NOISE_THRESHOLD){
 			tmp = 0;
 		}
-		im_diff[i] = tmp;
+		im_diff[i] = tmp;*/
 
-
-		//plutot :
-		//im_diff[i] = difference(imr, imb, img, i, GREEN_NOISE_THRESHOLD);
+		im_diff[i] = difference(buffer_green, buffer_red, buffer_blue, i, GREEN_NOISE_THRESHOLD);
 	}
 
 	stop = 0;
@@ -382,6 +380,8 @@ uint16_t test_extract_shore(uint8_t *buffer_blue, uint8_t *buffer_green, uint8_t
 		}
 		return right_shore_position ;
 	}
+
+
 
 	if(shore == LEFT_SHORE){
 		left_shore_position = 0;
