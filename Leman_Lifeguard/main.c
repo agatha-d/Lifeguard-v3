@@ -1,6 +1,6 @@
 /* File :				Leman_Lifeguard
  * Authors : 			Agatha Duranceau and Roxane Mérat
- * Last modified : 		05/16/2021 at 1pm
+ * Last modified : 		05/16/2021 at 9pm
  *
  * Adapted from TP4_CamReg, code given in the MICRO-315 class
  */
